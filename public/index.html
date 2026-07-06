@@ -110,7 +110,7 @@
                         </div>
 
                         <!-- CONTENU DES ONGLETS -->
-                        <div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-4 gap-2"></div>
+                        <div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-2 gap-2"></div>
                         <div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2"></div>
                         <div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2">
                             <input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
@@ -131,8 +131,8 @@
 		// Fonction utilitaire pour créer le sprite
 		function getTypeSprite(typeName) {
 		// Utilisation d'une classe CSS pour le contrôle de taille
-			return `<img src="/sprites/${typeName.toLowerCase()}.png"
-                 class="w-8 h-1.6 object-contain inline-block"`;
+			return `<img src="./sprites/${typeName.toLowerCase()}.png"
+                 class="w-20 h-4 object-contain inline-block"`;
 		}
 	
 	// Nettoie un nom pour correspondre aux clés de la base de données Smogon (ex: "U-turn" -> "uturn")
@@ -252,11 +252,11 @@
                 li.onclick = () => selectPokemon(id);
                 li.innerHTML = `
                     <div>
+                        <strong class="block text-xl text-gray-200">${pk.name}</strong>
                         <span class="text-xs text-gray-500 font-mono">#${pk.num}</span>
-                        <strong class="block text-sm text-gray-200">${pk.name}</strong>
                     </div>
                     <div class="flex gap-1">
-						${pk.types.map(t => `<span class="bg-gray-900 rounded-full p-0.5">${getTypeSprite(t)}</span>`).join('')}
+						${pk.types.map(t => `<span class="p-0.5">${getTypeSprite(t)}</span>`).join('')}
 					</div>
                 `;
                 list.appendChild(li);
