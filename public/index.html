@@ -29,7 +29,7 @@
 
         <!-- ESPACE DE TRAVAIL PRINCIPAL -->
         <main class="w-3/4 p-6 overflow-y-auto space-y-6">
-            <div id="editorZone" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div id="editorZone" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 <!-- COLONNE GAUCHE : IDENTITÉ & IMAGES & STATS -->
                 <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
@@ -83,21 +83,25 @@
                     </div>
                 </section>
 
-                <!-- COLONNE DROITE : CAPACITÉS & TALENTS CHOISIS -->
+                <!-- COLONNE CENTRALE : CAPACITÉS & TALENTS CHOISIS -->
                 <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
                     <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Configuration du Kit</h3>
                     
                     <div>
                         <h4 class="font-bold text-gray-300 mb-1">Talents du Fakemon</h4>
-                        <div id="selectedAbilities" class="space-y-1 max-h-[120px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+                        <div id="selectedAbilities" class="space-y-1 max-h-[200px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
                     </div>
 
                     <div>
                         <h4 class="font-bold text-gray-300 mb-1">Attaques du Pool (Learnset)</h4>
-                        <div id="selectedMoves" class="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+                        <div id="selectedMoves" class="grid grid-cols-2 gap-2 max-h-[800px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
                     </div>
-
-                    <!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
+				</section>
+				
+				<!-- COLONNE DROITE : CHOIX TYPES & CAPACITÉS & TALENTS -->
+				<section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4 flex flex-col">
+                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Banque de Données</h3>
+					<!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
                     <div class="border-t border-gray-700 pt-4">
                         <div class="flex border-b border-gray-600 text-sm">
                             <button onclick="switchTab('tabTypes')" class="tab-btn px-4 py-2 bg-gray-700 text-white font-medium rounded-t">Types</button>
@@ -107,8 +111,8 @@
 
                         <!-- CONTENU DES ONGLETS -->
                         <div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-4 gap-2"></div>
-                        <div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[250px] overflow-y-auto space-y-2"></div>
-                        <div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[250px] overflow-y-auto space-y-2">
+                        <div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2"></div>
+                        <div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2">
                             <input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
                             <div id="movesContainer" class="space-y-1"></div>
                         </div>
@@ -124,6 +128,13 @@
 
     <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
     <script>
+		// Fonction utilitaire pour créer le sprite
+		function getTypeSprite(typeName) {
+		// Utilisation d'une classe CSS pour le contrôle de taille
+			return `<img src="/sprites/${typeName.toLowerCase()}.png"
+                 class="w-8 h-1.6 object-contain inline-block"`;
+		}
+	
 	// Nettoie un nom pour correspondre aux clés de la base de données Smogon (ex: "U-turn" -> "uturn")
 		function toID(text) {
 			return text ? text.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
@@ -244,7 +255,9 @@
                         <span class="text-xs text-gray-500 font-mono">#${pk.num}</span>
                         <strong class="block text-sm text-gray-200">${pk.name}</strong>
                     </div>
-                    <div class="flex gap-1">${pk.types.map(t => `<span class="px-1.5 py-0.5 text-[10px] rounded bg-gray-900 font-bold">${t}</span>`).join('')}</div>
+                    <div class="flex gap-1">
+						${pk.types.map(t => `<span class="bg-gray-900 rounded-full p-0.5">${getTypeSprite(t)}</span>`).join('')}
+					</div>
                 `;
                 list.appendChild(li);
             });
@@ -255,7 +268,7 @@
             const tabTypes = document.getElementById('tabTypes');
             tabTypes.innerHTML = "";
             Object.keys(typeChart).forEach(t => {
-                tabTypes.innerHTML += `<button onclick="addTypeToFakemon('${t}')" class="bg-gray-600 hover:bg-gray-500 p-1 rounded text-xs font-bold text-center">${t}</button>`;
+                tabTypes.innerHTML += `<button onclick="addTypeToFakemon('${t}')" class="bg-gray-600 hover:bg-gray-500 p-2 rounded flex flex-col items-center gap-1"> ${getTypeSprite(t)} </button>`;
             });
 
             // Remplir l'onglet des Talents
@@ -356,11 +369,12 @@
             const div = document.getElementById('selectedTypes');
             div.innerHTML = "";
             db.pokedex[activeId].types.forEach((t, i) => {
-                div.innerHTML += `
-                    <span class="bg-red-900 px-2 py-1 rounded text-xs font-bold flex items-center gap-2">
-                        ${t} <button onclick="removeType(${i})" class="text-red-400 hover:text-white font-black">×</button>
-                    </span>`;
-            });
+				div.innerHTML += `
+					<span class="bg-gray-700 px-2 py-1 rounded flex items-center gap-2 border border-gray-600">
+						${getTypeSprite(t)}
+						<button onclick="removeType(${i})" class="text-red-400 hover:text-white font-black">×</button>
+					</span>`;
+			});
             calculateWeaknesses();
         }
 
