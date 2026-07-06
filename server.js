@@ -14,34 +14,30 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur universel modifié pour remplacer "export const" par "var"
+// Analyseur universel : nettoie les types TS mais préserve STRICTEMENT le "export const" initial
 function parseCustomModTS(tsContent, defaultVar) {
     try {
-        if (!tsContent || typeof tsContent !== 'string') return `var ${defaultVar} = {};`;
+        if (!tsContent || typeof tsContent !== 'string') return `export const ${defaultVar} = {};`;
         
-        // On remplace le mot-clé export par var pour éviter le crash de l'eval()
-        let cleanContent = tsContent.replace(/^\s*export\s+const\s+/, 'var ');
-        cleanContent = cleanContent.replace(/^\s*export\s+let\s+/, 'var ');
+        const equalIndex = tsContent.indexOf('=');
+        if (equalIndex === -1) return tsContent;
         
-        const equalIndex = cleanContent.indexOf('=');
-        if (equalIndex === -1) return cleanContent;
-        
-        let declaration = cleanContent.slice(0, equalIndex);
+        let declaration = tsContent.slice(0, equalIndex);
         const colonIndex = declaration.indexOf(':');
-        if (colonIndex !== -1) {
+        if (colonIndex !== -1 && colonIndex > declaration.indexOf('const')) {
             declaration = declaration.slice(0, colonIndex);
         }
         
-        return declaration + '=' + cleanContent.slice(equalIndex + 1);
+        return declaration + '=' + tsContent.slice(equalIndex + 1);
     } catch (e) {
-        return `var ${defaultVar} = {};`;
+        return `export const ${defaultVar} = {};`;
     }
 }
 
-// Reconstruit "moves.ts" avec des variables standards 'var'
+// Reconstruit "moves.ts" au format Showdown épuré et ultra-compatible
 function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "var BattleMovedex = {};";
+    if (!text) return "export const BattleMovedex = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -77,37 +73,37 @@ function parseMovesToJS(text) {
             }
 
             if (depth === 1) {
-                if (/^name\s*:/ .test(line)) {
-                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
+                if (/^['"]?name['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?name['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.name = m[1];
-                } else if (/^type\s*:/ .test(line)) {
-                    const m = line.match(/type\s*:\s*["'`](.*?)["'`]/);
+                } else if (/^['"]?type['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?type['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.type = m[1];
-                } else if (/^category\s*:/ .test(line)) {
-                    const m = line.match(/category\s*:\s*["'`](.*?)["'`]/);
+                } else if (/^['"]?category['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?category['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.category = m[1];
-                } else if (/^basePower\s*:/ .test(line)) {
-                    const m = line.match(/basePower\s*:\s*([0-9]+)/);
+                } else if (/^['"]?basePower['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?basePower['"]?\s*:\s*([0-9]+)/);
                     if (m) currentMove.basePower = parseInt(m[1], 10);
-                } else if (/^accuracy\s*:/ .test(line)) {
+                } else if (/^['"]?accuracy['"]?\s*:/ .test(line)) {
                     if (line.includes('true')) {
                         currentMove.accuracy = true;
                     } else {
-                        const m = line.match(/accuracy\s*:\s*([0-9]+)/);
+                        const m = line.match(/['"]?accuracy['"]?\s*:\s*([0-9]+)/);
                         if (m) currentMove.accuracy = parseInt(m[1], 10);
                     }
-                } else if (/^pp\s*:/ .test(line)) {
-                    const m = line.match(/pp\s*:\s*([0-9]+)/);
+                } else if (/^['"]?pp['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?pp['"]?\s*:\s*([0-9]+)/);
                     if (m) currentMove.pp = parseInt(m[1], 10);
-                } else if (/^priority\s*:/ .test(line)) {
-                    const m = line.match(/priority\s*:\s*(-?[0-9]+)/);
+                } else if (/^['"]?priority['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?priority['"]?\s*:\s*(-?[0-9]+)/);
                     if (m) currentMove.priority = parseInt(m[1], 10);
                 }
             }
         }
     }
 
-    let output = "var BattleMovedex = {\n";
+    let output = "export const BattleMovedex = {\n";
     for (const [id, move] of Object.entries(moves)) {
         output += `\t"${id}": {\n`;
         if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
@@ -119,14 +115,14 @@ function parseMovesToJS(text) {
         if (move.priority !== undefined) output += `\t\tpriority: ${move.priority},\n`;
         output += `\t},\n`;
     }
-    output += "};\nvar Moves = BattleMovedex;";
+    output += "};";
     return output;
 }
 
-// Reconstruit "abilities.ts" avec des variables standards 'var'
+// Reconstruit "abilities.ts" au format standard strict
 function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "var BattleAbilities = {};";
+    if (!text) return "export const BattleAbilities = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -162,28 +158,28 @@ function parseAbilitiesToJS(text) {
             }
 
             if (depth === 1) {
-                if (/^name\s*:/ .test(line)) {
-                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
+                if (/^['"]?name['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?name['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentAbility.name = m[1];
                 }
             }
         }
     }
 
-    let output = "var BattleAbilities = {\n";
+    let output = "export const BattleAbilities = {\n";
     for (const [id, ability] of Object.entries(abilities)) {
         output += `\t"${id}": {\n`;
         if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
         output += `\t},\n`;
     }
-    output += "};\nvar Abilities = BattleAbilities;";
+    output += "};";
     return output;
 }
 
-// Reconstruit les fichiers textes avec des variables standards 'var'
+// Reconstruit les fichiers textes régionaux au format standard strict
 function parseTextToJS(text, varName) {
     const dict = {};
-    if (!text) return `var ${varName} = {};`;
+    if (!text) return `export const ${varName} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -216,21 +212,21 @@ function parseTextToJS(text, varName) {
             }
 
             if (depth === 1) {
-                if (/^name\s*:/ .test(line)) {
-                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
+                if (/^['"]?name['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?name['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.name = m[1];
-                } else if (/^desc\s*:/ .test(line)) {
-                    const m = line.match(/desc\s*:\s*["'`](.*?)["'`]/);
+                } else if (/^['"]?desc['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?desc['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.desc = m[1];
-                } else if (/^shortDesc\s*:/ .test(line)) {
-                    const m = line.match(/shortDesc\s*:\s*["'`](.*?)["'`]/);
+                } else if (/^['"]?shortDesc['"]?\s*:/ .test(line)) {
+                    const m = line.match(/['"]?shortDesc['"]?\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.shortDesc = m[1];
                 }
             }
         }
     }
 
-    let output = `var ${varName} = {\n`;
+    let output = `export const ${varName} = {\n`;
     for (const [id, entry] of Object.entries(dict)) {
         output += `\t"${id}": {\n`;
         if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
@@ -238,9 +234,7 @@ function parseTextToJS(text, varName) {
         if (entry.shortDesc !== undefined) output += `\t\tshortDesc: ${JSON.stringify(entry.shortDesc)},\n`;
         output += `\t},\n`;
     }
-    output += "};\n";
-    if (varName === "BattleMovesText") output += "var MovesText = BattleMovesText;";
-    if (varName === "BattleAbilitiesText") output += "var AbilitiesText = BattleAbilitiesText;";
+    output += "};";
     return output;
 }
 
