@@ -14,22 +14,27 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur universel : laisse passer le format original intact pour la Regex du studio
+// Analyseur universel : nettoie TOUT type TS pour correspondre à la Regex "export const Variable = "
 function parseCustomModTS(tsContent, defaultVar) {
     try {
         if (!tsContent || typeof tsContent !== 'string') {
-            return `export const ${defaultVar}: {[k: string]: any} = {};`;
+            return `export const ${defaultVar} = {};`;
         }
-        return tsContent;
+        const equalIndex = tsContent.indexOf('=');
+        if (equalIndex !== -1) {
+            // Force le format strict : "export const NomVar = ..."
+            return `export const ${defaultVar} = ` + tsContent.slice(equalIndex + 1).trim();
+        }
+        return `export const ${defaultVar} = {};`;
     } catch (e) {
-        return `export const ${defaultVar}: {[k: string]: any} = {};`;
+        return `export const ${defaultVar} = {};`;
     }
 }
 
-// Reconstruit "moves.ts" avec le nom d'export officiel "Moves"
+// Reconstruit "moves.ts" au format ES6 pur (sans type TS)
 function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "export const Moves: {[moveid: string]: MoveData} = {};";
+    if (!text) return "export const Moves = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -95,7 +100,7 @@ function parseMovesToJS(text) {
         }
     }
 
-    let output = "export const Moves: {[moveid: string]: MoveData} = {\n";
+    let output = "export const Moves = {\n";
     for (const [id, move] of Object.entries(moves)) {
         output += `\t"${id}": {\n`;
         if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
@@ -111,10 +116,10 @@ function parseMovesToJS(text) {
     return output;
 }
 
-// Reconstruit "abilities.ts" avec le nom d'export officiel "Abilities"
+// Reconstruit "abilities.ts" au format ES6 pur
 function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "export const Abilities: {[abilityid: string]: AbilityData} = {};";
+    if (!text) return "export const Abilities = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -158,7 +163,7 @@ function parseAbilitiesToJS(text) {
         }
     }
 
-    let output = "export const Abilities: {[abilityid: string]: AbilityData} = {\n";
+    let output = "export const Abilities = {\n";
     for (const [id, ability] of Object.entries(abilities)) {
         output += `\t"${id}": {\n`;
         if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
@@ -168,17 +173,15 @@ function parseAbilitiesToJS(text) {
     return output;
 }
 
-// Reconstruit les fichiers textes ("BattleMovesText" -> "MovesText")
+// Reconstruit les fichiers textes au format ES6 pur
 function parseTextToJS(text, varName) {
     const dict = {};
     let officialVar = varName;
-    let typeStr = "any";
     
-    // Correspondance exacte avec les exports de Showdown
-    if (varName === "BattleMovesText") { officialVar = "MovesText"; typeStr = "MoveText"; }
-    if (varName === "BattleAbilitiesText") { officialVar = "AbilitiesText"; typeStr = "AbilityText"; }
+    if (varName === "BattleMovesText") officialVar = "MovesText";
+    if (varName === "BattleAbilitiesText") officialVar = "AbilitiesText";
 
-    if (!text) return `export const ${officialVar}: {[k: string]: ${typeStr}} = {};`;
+    if (!text) return `export const ${officialVar} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -225,7 +228,7 @@ function parseTextToJS(text, varName) {
         }
     }
 
-    let output = `export const ${officialVar}: {[k: string]: ${typeStr}} = {\n`;
+    let output = `export const ${officialVar} = {\n`;
     for (const [id, entry] of Object.entries(dict)) {
         output += `\t"${id}": {\n`;
         if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
