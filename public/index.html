@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>HSD - Fakemon Studio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans">
+
+    <header class="bg-gray-800 p-4 border-b border-gray-700 flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-red-500">🐉 hicsuntdracones.win <span class="text-white text-lg font-normal">| Fakemon Studio</span></h1>
+        <div class="space-x-2">
+            <button onclick="loadFromGitHub(event)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition">⚡ Charger Données GitHub</button>
+            <button onclick="saveAllChanges()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-medium transition">💾 Enregistrer les Fichiers</button>
+        </div>
+    </header>
+
+    <div class="flex h-[calc(100vh-73px)]">
+        <!-- BARRE LATERALE : LISTE DES POKEMON -->
+        <aside class="w-1/4 bg-gray-800 border-r border-gray-700 flex flex-col">
+            <div class="p-3 border-b border-gray-700 space-y-2">
+                <input type="text" id="searchBar" oninput="filterPokemon()" placeholder="Rechercher un Pokémon..." class="w-full bg-gray-700 border border-gray-600 p-2 rounded text-white focus:outline-none">
+                <button onclick="createNewFakemon()" class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold transition">+ CRÉER UN FAKEMON</button>
+            </div>
+            <ul id="pokemonList" class="flex-1 overflow-y-auto divide-y divide-gray-700">
+                <li class="p-4 text-gray-400 text-center">Cliquez sur "Charger Données GitHub" pour commencer.</li>
+            </ul>
+        </aside>
+
+        <!-- ESPACE DE TRAVAIL PRINCIPAL -->
+        <main class="w-3/4 p-6 overflow-y-auto space-y-6">
+            <div id="editorZone" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- COLONNE GAUCHE : IDENTITÉ & IMAGES & STATS -->
+                <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
+                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Identité & Caractéristiques</h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm text-gray-400">Nom du Fakemon</label>
+                            <input type="text" id="fkName" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400">Numéro Pokédex</label>
+                            <input type="number" id="fkNum" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
+                        </div>
+                    </div>
+
+                    <!-- RE-DIMENSIONNEMENT IMAGE VIA CANVAS -->
+                    <div>
+                        <label class="block text-sm text-gray-400">Illustration (Ajustement Auto)</label>
+                        <input type="file" id="fkImageFile" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-sm text-gray-400 mt-1 file:bg-gray-700 file:text-white file:border-0 file:p-2 file:rounded file:cursor-pointer">
+                        <div class="flex space-x-4 mt-3 bg-gray-900 p-3 rounded justify-around">
+                            <div class="text-center">
+                                <span class="text-xs text-gray-400">Combat (96x96)</span>
+                                <canvas id="canvas96" width="96" height="96" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
+                            </div>
+                            <div class="text-center">
+                                <span class="text-xs text-gray-400">Icône (40x30)</span>
+                                <canvas id="canvas40" width="40" height="30" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TYPES ACTUELS -->
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Types Sélectionnés</label>
+                        <div id="selectedTypes" class="flex gap-2 min-h-[40px] p-2 bg-gray-900 rounded border border-gray-700"></div>
+                    </div>
+
+                    <!-- STATISTIQUES EDITABLES -->
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">Statistiques de Base</label>
+                        <div class="grid grid-cols-3 gap-2" id="statsContainer">
+                            <!-- Généré via JS -->
+                        </div>
+                    </div>
+
+                    <!-- CALCULATEUR DE FAIBLESSES DYNAMIQUE -->
+                    <div>
+                        <h4 class="text-sm font-bold text-gray-400 mb-2">Profil Défensif (Faiblesses & Résistances)</h4>
+                        <div id="typeMatchups" class="grid grid-cols-6 gap-1 text-center text-xs"></div>
+                    </div>
+                </section>
+
+                <!-- COLONNE DROITE : CAPACITÉS & TALENTS CHOISIS -->
+                <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
+                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Configuration du Kit</h3>
+                    
+                    <div>
+                        <h4 class="font-bold text-gray-300 mb-1">Talents du Fakemon</h4>
+                        <div id="selectedAbilities" class="space-y-1 max-h-[120px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-gray-300 mb-1">Attaques du Pool (Learnset)</h4>
+                        <div id="selectedMoves" class="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+                    </div>
+
+                    <!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
+                    <div class="border-t border-gray-700 pt-4">
+                        <div class="flex border-b border-gray-600 text-sm">
+                            <button onclick="switchTab('tabTypes')" class="tab-btn px-4 py-2 bg-gray-700 text-white font-medium rounded-t">Types</button>
+                            <button onclick="switchTab('tabAbilities')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Talents</button>
+                            <button onclick="switchTab('tabMoves')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Attaques</button>
+                        </div>
+
+                        <!-- CONTENU DES ONGLETS -->
+                        <div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-4 gap-2"></div>
+                        <div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[250px] overflow-y-auto space-y-2"></div>
+                        <div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[250px] overflow-y-auto space-y-2">
+                            <input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
+                            <div id="movesContainer" class="space-y-1"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            <div id="welcomeZone" class="text-center py-20 text-gray-500 text-lg">
+                Sélectionnez ou créez un Pokémon pour ouvrir l'atelier d'édition.
+            </div>
+        </main>
+    </div>
+
+    <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
+    <script>
+	// Nettoie un nom pour correspondre aux clés de la base de données Smogon (ex: "U-turn" -> "uturn")
+		function toID(text) {
+			return text ? text.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+		}
+	
+        let db = { pokedex: {}, formatsData: {}, learnsets: {}, moves: {}, abilities: {} };
+        let activeId = null;
+        let localImages = {};
+
+        const typeChart = {
+            Normal: { Rock: 0.5, Ghost: 0, Steel: 0.5 },
+            Fire: { Fire: 0.5, Water: 0.5, Grass: 2, Ice: 2, Bug: 2, Rock: 0.5, Dragon: 0.5, Steel: 2, Fairy: 1 },
+            Water: { Fire: 2, Water: 0.5, Grass: 0.5, Ground: 2, Rock: 2, Dragon: 0.5 },
+            Grass: { Fire: 0.5, Water: 2, Grass: 0.5, Poison: 0.5, Ground: 2, Flying: 0.5, Bug: 0.5, Rock: 2, Dragon: 0.5, Steel: 0.5 },
+            Electric: { Water: 2, Grass: 0.5, Electric: 0.5, Ground: 0, Flying: 2, Dragon: 0.5 },
+            Ice: { Fire: 0.5, Water: 0.5, Grass: 2, Ice: 0.5, Ground: 2, Flying: 2, Dragon: 2, Steel: 0.5, Fire: 0.5 },
+            Fighting: { Normal: 2, Ice: 2, Poison: 0.5, Flying: 0.5, Psychic: 0.5, Bug: 0.5, Rock: 2, Ghost: 0, Dark: 2, Steel: 2, Fairy: 0.5 },
+            Poison: { Grass: 2, Poison: 0.5, Ground: 0.5, Rock: 0.5, Ghost: 0.5, Steel: 0, Fairy: 2 },
+            Ground: { Fire: 2, Grass: 0.5, Electric: 2, Poison: 2, Flying: 0, Bug: 0.5, Rock: 2, Steel: 2 },
+            Flying: { Grass: 2, Electric: 0.5, Fighting: 2, Bug: 2, Rock: 0.5, Steel: 0.5 },
+            Psychic: { Fighting: 2, Poison: 2, Psychic: 0.5, Dark: 0, Steel: 0.5 },
+            Bug: { Fire: 0.5, Grass: 2, Fighting: 0.5, Poison: 0.5, Flying: 0.5, Psychic: 2, Ghost: 0.5, Dark: 2, Steel: 0.5, Fairy: 0.5 },
+            Rock: { Fire: 2, Ice: 2, Fighting: 0.5, Ground: 0.5, Flying: 2, Bug: 2, Steel: 0.5 },
+            Ghost: { Normal: 0, Psychic: 2, Ghost: 2, Dark: 0.5 },
+            Dragon: { Dragon: 2, Steel: 0.5, Fairy: 0 },
+            Dark: { Fighting: 0.5, Psychic: 2, Ghost: 2, Dark: 0.5, Fairy: 0.5 },
+            Steel: { Water: 0.5, Electric: 0.5, Ice: 2, Rock: 2, Steel: 0.5, Fairy: 2, Fire: 0.5 },
+            Fairy: { Fire: 0.5, Fighting: 2, Poison: 0.5, Dragon: 2, Dark: 2, Steel: 0.5 }
+        };
+
+		async function loadFromGitHub(e) {
+			// 1. On empêche le comportement par défaut si nécessaire
+			if (e) e.preventDefault();
+
+			const defaultUrl = "https://github.com/AayLith/DH2/tree/master/data/mods/hicsuntdracones";
+			const userUrl = prompt("Entrez l'URL GitHub de votre dossier de mod :", defaultUrl);
+			
+			if (!userUrl) return;
+
+			// 2. Récupération sécurisée du bouton
+			const btn = e ? e.target : null;
+			let originalText = "";
+			if (btn) {
+				originalText = btn.innerText;
+				btn.innerText = "⏳ Chargement en cours...";
+				btn.disabled = true;
+			}
+
+			try {
+				const res = await fetch('/api/load-mod', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ githubUrl: userUrl })
+				});
+				
+				const data = await res.json();
+				
+				if(data.success) {
+					db.pokedex = new Function(`return ${data.pokedex}`)();
+					db.formatsData = new Function(`return ${data.formatsData}`)();
+					db.learnsets = new Function(`return ${data.learnsets}`)();
+					
+					// 1. Extraction temporaire des dictionnaires de texte reçus
+					const movesText = new Function(`return ${data.movesText}`)();
+					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
+					
+					// 2. Fusion des descriptions dans le dictionnaire des Talents
+					Object.keys(db.abilities).forEach(id => {
+						if (abilitiesText && abilitiesText[id]) {
+							db.abilities[id].desc = abilitiesText[id].desc || "";
+							db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
+						}
+					});
+
+					// 3. Fusion des descriptions dans le dictionnaire des Attaques
+					Object.keys(db.moves).forEach(id => {
+						if (movesText && movesText[id]) {
+							db.moves[id].desc = movesText[id].desc || "";
+							db.moves[id].shortDesc = movesText[id].shortDesc || "";
+						}
+					});
+					
+					buildUILists();
+					renderPokemonSidebar();
+					alert("✅ Données et descriptions chargées avec succès !");
+				} else {
+					alert(`❌ Échec du serveur : ${data.error}`);
+				}
+			} catch (err) {
+				// AJOUT CRUCIAL : On affiche la vraie erreur dans la console F12 du navigateur
+				console.error("Détails du crash :", err);
+				alert(`❌ Erreur : ${err.message}. Ouvrez la console (F12) pour voir les détails.`);
+			} finally {
+				if (btn) {
+					btn.innerText = originalText;
+					btn.disabled = false;
+				}
+			}
+		}
+
+        function renderPokemonSidebar() {
+            const list = document.getElementById('pokemonList');
+            list.innerHTML = "";
+            Object.keys(db.pokedex).forEach(id => {
+                const pk = db.pokedex[id];
+                const li = document.createElement('li');
+                li.className = "p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center transition";
+                li.onclick = () => selectPokemon(id);
+                li.innerHTML = `
+                    <div>
+                        <span class="text-xs text-gray-500 font-mono">#${pk.num}</span>
+                        <strong class="block text-sm text-gray-200">${pk.name}</strong>
+                    </div>
+                    <div class="flex gap-1">${pk.types.map(t => `<span class="px-1.5 py-0.5 text-[10px] rounded bg-gray-900 font-bold">${t}</span>`).join('')}</div>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        function buildUILists() {
+            // Remplir l'onglet de sélection des Types
+            const tabTypes = document.getElementById('tabTypes');
+            tabTypes.innerHTML = "";
+            Object.keys(typeChart).forEach(t => {
+                tabTypes.innerHTML += `<button onclick="addTypeToFakemon('${t}')" class="bg-gray-600 hover:bg-gray-500 p-1 rounded text-xs font-bold text-center">${t}</button>`;
+            });
+
+            // Remplir l'onglet des Talents
+            const tabAbil = document.getElementById('tabAbilities');
+            tabAbil.innerHTML = "";
+            Object.keys(db.abilities).sort().forEach(id => {
+                const ab = db.abilities[id];
+                tabAbil.innerHTML += `
+                    <div onclick="addAbilityToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer">
+                        <strong>${ab.name}</strong> — <span class="text-gray-300">${ab.shortDesc || "Pas de description"}</span>
+                    </div>`;
+            });
+
+            // Remplir l'onglet des Attaques
+            searchInMoves();
+        }
+
+		function searchInMoves() {
+			const query = document.getElementById('searchMove').value.toLowerCase();
+			const container = document.getElementById('movesContainer');
+			container.innerHTML = "";
+			
+			Object.keys(db.moves).filter(id => db.moves[id].name.toLowerCase().includes(query)).slice(0, 40).forEach(id => {
+				const mv = db.moves[id];
+				// Récupération de la description fraîchement fusionnée
+				const description = mv.shortDesc || mv.desc || "Aucune description disponible.";
+				const category = mv.category || "Status";
+
+				container.innerHTML += `
+					<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">
+						<div class="flex justify-between font-bold">
+							<span class="text-white">${mv.name} <span class="text-[10px] px-1 py-0.2 bg-gray-800 rounded text-gray-300 ml-1">${mv.type} - ${category}</span></span>
+							<span class="text-gray-300">Pwr: ${mv.basePower || 0} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
+						</div>
+						<div class="text-gray-400 text-[11px] italic truncate">${description}</div>
+					</div>`;
+			});
+		}
+
+        function selectPokemon(id) {
+            activeId = id;
+            document.getElementById('welcomeZone').classList.add('hidden');
+            document.getElementById('editorZone').classList.remove('hidden');
+
+            const pk = db.pokedex[id];
+            document.getElementById('fkName').value = pk.name;
+            document.getElementById('fkNum').value = pk.num;
+
+            // Charger les stats
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = "";
+            const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+            statKeys.forEach(k => {
+                statsContainer.innerHTML += `
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase font-bold">${k}</label>
+                        <input type="number" value="${pk.baseStats[k] || 0}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
+                    </div>`;
+            });
+
+            // Afficher l'image si elle existe en local
+            const c96 = document.getElementById('canvas96').getContext('2d');
+            const c40 = document.getElementById('canvas40').getContext('2d');
+            c96.clearRect(0,0,96,96); c40.clearRect(0,0,40,30);
+            if(localImages[id]) {
+                let img = new Image();
+                img.onload = () => { c96.drawImage(img,0,0,96,96); c40.drawImage(img,0,0,40,30); }
+                img.src = localImages[id].sprite;
+            }
+
+            renderActiveTypes();
+            renderActiveAbilities();
+            renderActiveMoves();
+            calculateWeaknesses();
+        }
+
+        function createNewFakemon() {
+            const name = prompt("Nom du Fakemon :", "NouveauFakemon");
+            if(!name) return;
+            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+            
+            db.pokedex[id] = {
+                num: -Math.floor(Math.random() * 10000), // Nombre négatif par défaut pour éviter les conflits
+                name: name,
+                types: ["Normal"],
+                baseStats: { hp: 60, atk: 60, def: 60, spa: 60, spd: 60, spe: 60 },
+                abilities: { 0: "Blaze" }
+            };
+
+            db.formatsData[id] = { tier: "HSD", isNonstandard: null };
+            db.learnsets[id] = { learnset: { tackle: ["9M"] } };
+
+            renderPokemonSidebar();
+            selectPokemon(id);
+        }
+
+        function renderActiveTypes() {
+            const div = document.getElementById('selectedTypes');
+            div.innerHTML = "";
+            db.pokedex[activeId].types.forEach((t, i) => {
+                div.innerHTML += `
+                    <span class="bg-red-900 px-2 py-1 rounded text-xs font-bold flex items-center gap-2">
+                        ${t} <button onclick="removeType(${i})" class="text-red-400 hover:text-white font-black">×</button>
+                    </span>`;
+            });
+            calculateWeaknesses();
+        }
+
+        function addTypeToFakemon(type) {
+            let current = db.pokedex[activeId].types;
+            if(current.length < 2 && !current.includes(type)) {
+                current.push(type);
+                renderActiveTypes();
+            }
+        }
+
+        function removeType(index) {
+            let current = db.pokedex[activeId].types;
+            if(current.length > 1) {
+                current.splice(index, 1);
+                renderActiveTypes();
+            }
+        }
+
+		function renderActiveAbilities() {
+			const div = document.getElementById('selectedAbilities');
+			div.innerHTML = "";
+			const pk = db.pokedex[activeId];
+			if (!pk || !pk.abilities) return;
+
+			Object.entries(pk.abilities).forEach(([slot, abilityName]) => {
+				const id = toID(abilityName);
+				// On récupère la description fusionnée depuis Smogon
+				const abData = db.abilities[id] || { name: abilityName, shortDesc: "Talent personnalisé ou description manquante." };
+				const isHidden = slot === 'H' ? '<span class="text-[10px] bg-purple-950 text-purple-300 px-1 rounded border border-purple-700 font-semibold ml-1">Caché</span>' : '';
+
+				div.innerHTML += `
+					<div class="p-2 bg-gray-700 border border-gray-600 rounded text-xs flex flex-col space-y-1 relative">
+						<div class="flex justify-between items-center font-bold text-white">
+							<span>Slot ${slot}: ${abData.name} ${isHidden}</span>
+							<button onclick="removeAbility('${slot}')" class="text-red-400 hover:text-red-200 font-black text-sm px-1">×</button>
+						</div>
+						<div class="text-gray-400 italic text-[11px] leading-tight">${abData.shortDesc || abData.desc || 'Pas de description.'}</div>
+					</div>`;
+			});
+		}
+
+        function addAbilityToFakemon(abilityId) {
+            const ab = db.abilities[abilityId];
+            let abils = db.pokedex[activeId].abilities;
+            let nextSlot = Object.keys(abils).length;
+            if(nextSlot < 3) {
+                abils[nextSlot === 2 ? 'H' : nextSlot] = ab.name;
+                renderActiveAbilities();
+            }
+        }
+
+        function removeAbility(key) {
+            delete db.pokedex[activeId].abilities[key];
+            renderActiveAbilities();
+        }
+
+		function renderActiveMoves() {
+			const div = document.getElementById('selectedMoves');
+			div.innerHTML = "";
+			const lset = db.learnsets[activeId] ? db.learnsets[activeId].learnset : {};
+
+			Object.keys(lset).forEach(moveId => {
+				const id = toID(moveId);
+				// On va chercher toutes les infos de l'attaque
+				const mv = db.moves[id] || { 
+					name: moveId, 
+					type: "???", 
+					category: "Status", 
+					basePower: 0, 
+					accuracy: true, 
+					shortDesc: "Capacité personnalisée ou non répertoriée." 
+				};
+
+				const category = mv.category || "Status";
+				const power = mv.basePower || "—";
+				const accuracy = mv.accuracy === true ? "—" : `${mv.accuracy}%`;
+				const description = mv.shortDesc || mv.desc || "Aucune description.";
+
+				// Code couleur selon la catégorie d'attaque
+				let catColor = "bg-gray-800 text-gray-400";
+				if (category === "Physical") catColor = "bg-red-950 text-red-300 border border-red-800";
+				if (category === "Special") catColor = "bg-blue-950 text-blue-300 border border-blue-800";
+
+				div.innerHTML += `
+					<div class="bg-gray-700 border border-gray-600 p-2 rounded text-xs flex flex-col justify-between space-y-1.5 relative">
+						<div class="flex justify-between items-start gap-1 pr-4">
+							<div>
+								<span class="font-bold text-white block">${mv.name}</span>
+								<div class="flex gap-1 mt-0.5 text-[9px] font-semibold uppercase">
+									<span class="px-1 bg-gray-900 text-gray-300 rounded">${mv.type}</span>
+									<span class="px-1 rounded ${catColor}">${category}</span>
+								</div>
+							</div>
+							<div class="text-right text-[10px] text-gray-400 font-mono leading-none">
+								<div>Pwr: <span class="text-white font-bold">${power}</span></div>
+								<div class="mt-0.5">Acc: <span class="text-white font-bold">${accuracy}</span></div>
+							</div>
+						</div>
+						<div class="text-[10px] text-gray-400 italic pt-1 border-t border-gray-600/50 truncate" title="${description}">
+							${description}
+						</div>
+						<button onclick="removeMove('${moveId}')" class="absolute top-1 right-1.5 text-red-400 hover:text-red-200 font-bold text-sm">×</button>
+					</div>`;
+			});
+		}
+
+        function addMoveToFakemon(moveId) {
+            if(!db.learnsets[activeId]) db.learnsets[activeId] = { learnset: {} };
+            db.learnsets[activeId].learnset[moveId] = ["9M"];
+            renderActiveMoves();
+        }
+
+        function removeMove(moveId) {
+            delete db.learnsets[activeId].learnset[moveId];
+            renderActiveMoves();
+        }
+
+        function updateStat(statKey, val) {
+            db.pokedex[activeId].baseStats[statKey] = parseInt(val) || 0;
+        }
+
+        function updateFakemonIdentity() {
+            db.pokedex[activeId].name = document.getElementById('fkName').value;
+            db.pokedex[activeId].num = parseInt(document.getElementById('fkNum').value) || 0;
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const c96 = document.getElementById('canvas96');
+                    const c40 = document.getElementById('canvas40');
+                    const ctx96 = c96.getContext('2d');
+                    const ctx40 = c40.getContext('2d');
+
+                    ctx96.clearRect(0,0,96,96);
+                    ctx40.clearRect(0,0,40,30);
+
+                    // Redimensionnements fluides via canvas
+                    ctx96.drawImage(img, 0, 0, 96, 96);
+                    ctx40.drawImage(img, 0, 0, 40, 30);
+
+                    // Archivage local au format DataURL
+                    localImages[activeId] = {
+                        sprite: c96.toDataURL('image/png'),
+                        icon: c40.toDataURL('image/png')
+                    };
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function calculateWeaknesses() {
+            const container = document.getElementById('typeMatchups');
+            container.innerHTML = "";
+            const myTypes = db.pokedex[activeId].types;
+
+            Object.keys(typeChart).forEach(atkType => {
+                let multiplier = 1;
+                myTypes.forEach(defType => {
+                    if (typeChart[atkType] && typeChart[atkType][defType] !== undefined) {
+                        multiplier *= typeChart[atkType][defType];
+                    }
+                });
+
+                if(multiplier !== 1) {
+                    let color = "bg-gray-700 text-gray-400";
+                    if(multiplier >= 2) color = "bg-red-900 text-red-200 font-bold";
+                    if(multiplier <= 0.5 && multiplier > 0) color = "bg-green-900 text-green-200";
+                    if(multiplier === 0) color = "bg-black text-purple-400 font-bold";
+
+                    container.innerHTML += `<div class="${color} p-1 rounded border border-gray-700">${atkType}<br>x${multiplier}</div>`;
+                }
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('bg-gray-700', 'text-white'));
+            
+            document.getElementById(tabId).classList.remove('hidden');
+            event.target.classList.add('bg-gray-700', 'text-white');
+        }
+
+        async function saveAllChanges() {
+            const res = await fetch('/api/save-fakemons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    pokedex: db.pokedex,
+                    formatsData: db.formatsData,
+                    learnsets: db.learnsets,
+                    images: localImages
+                })
+            });
+            const result = await res.json();
+            alert(result.message || "Erreur lors de la sauvegarde.");
+        }
+
+        function filterPokemon() {
+            const query = document.getElementById('searchBar').value.toLowerCase();
+            const items = document.getElementById('pokemonList').getElementsByTagName('li');
+            Array.from(items).forEach(item => {
+                const text = item.innerText.toLowerCase();
+                item.style.display = text.includes(query) ? "" : "none";
+            });
+        }
+    </script>
+</body>
+</html>
