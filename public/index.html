@@ -308,7 +308,7 @@
 							<span class="text-white">${mv.name} <span class="text-[10px] px-1 py-0.2 bg-gray-800 rounded text-gray-300 ml-1">${mv.type} - ${category}</span></span>
 							<span class="text-gray-300">Pwr: ${mv.basePower || 0} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
 						</div>
-						<div class="text-gray-400 text-[11px] italic truncate">${description}</div>
+						<div class="text-gray-400 text-[11px] truncate">${description}</div>
 					</div>`;
 			});
 		}
@@ -444,17 +444,16 @@
 
 			Object.keys(lset).forEach(moveId => {
 				const id = toID(moveId);
+				const mv = db.moves[id];
 				// On va chercher toutes les infos de l'attaque
-				const mv = db.moves[id] || { 
-					name: moveId, 
-					type: "???", 
-					category: "Status", 
-					basePower: 0, 
-					accuracy: true, 
-					shortDesc: "Capacité personnalisée ou non répertoriée." 
-				};
 
-				const category = mv.category || "Status";
+				if (!mv) {
+					console.log("Attaque introuvable :", moveId);
+					return;
+				}
+
+				const type = mv.type || "???"; // Valeur par défaut si undefined
+				const category = mv.category || "Error";
 				const power = mv.basePower || "—";
 				const accuracy = mv.accuracy === true ? "—" : `${mv.accuracy}%`;
 				const description = mv.shortDesc || mv.desc || "Aucune description.";
@@ -479,7 +478,7 @@
 								<div class="mt-0.5">Acc: <span class="text-white font-bold">${accuracy}</span></div>
 							</div>
 						</div>
-						<div class="text-[10px] text-gray-400 italic pt-1 border-t border-gray-600/50 truncate" title="${description}">
+						<div class="text-[10px] text-gray-400 pt-1 border-t border-gray-600/50 truncate" title="${description}">
 							${description}
 						</div>
 						<button onclick="removeMove('${moveId}')" class="absolute top-1 right-1.5 text-red-400 hover:text-red-200 font-bold text-sm">×</button>
