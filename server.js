@@ -14,7 +14,7 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur universel : préserve STRICTEMENT le format et les types d'origine
+// Analyseur universel : laisse passer le format original intact pour la Regex du studio
 function parseCustomModTS(tsContent, defaultVar) {
     try {
         if (!tsContent || typeof tsContent !== 'string') {
@@ -26,10 +26,10 @@ function parseCustomModTS(tsContent, defaultVar) {
     }
 }
 
-// Reconstruit "moves.ts" avec la signature de type officielle Showdown
+// Reconstruit "moves.ts" avec le nom d'export officiel "Moves"
 function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "export const BattleMovedex: {[moveid: string]: MoveData} = {};";
+    if (!text) return "export const Moves: {[moveid: string]: MoveData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -95,7 +95,7 @@ function parseMovesToJS(text) {
         }
     }
 
-    let output = "export const BattleMovedex: {[moveid: string]: MoveData} = {\n";
+    let output = "export const Moves: {[moveid: string]: MoveData} = {\n";
     for (const [id, move] of Object.entries(moves)) {
         output += `\t"${id}": {\n`;
         if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
@@ -111,10 +111,10 @@ function parseMovesToJS(text) {
     return output;
 }
 
-// Reconstruit "abilities.ts" avec la signature de type officielle Showdown
+// Reconstruit "abilities.ts" avec le nom d'export officiel "Abilities"
 function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "export const BattleAbilities: {[abilityid: string]: AbilityData} = {};";
+    if (!text) return "export const Abilities: {[abilityid: string]: AbilityData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -158,7 +158,7 @@ function parseAbilitiesToJS(text) {
         }
     }
 
-    let output = "export const BattleAbilities: {[abilityid: string]: AbilityData} = {\n";
+    let output = "export const Abilities: {[abilityid: string]: AbilityData} = {\n";
     for (const [id, ability] of Object.entries(abilities)) {
         output += `\t"${id}": {\n`;
         if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
@@ -168,14 +168,17 @@ function parseAbilitiesToJS(text) {
     return output;
 }
 
-// Reconstruit les fichiers textes avec la signature de type attendue
+// Reconstruit les fichiers textes ("BattleMovesText" -> "MovesText")
 function parseTextToJS(text, varName) {
     const dict = {};
+    let officialVar = varName;
     let typeStr = "any";
-    if (varName === "BattleMovesText") typeStr = "MoveText";
-    if (varName === "BattleAbilitiesText") typeStr = "AbilityText";
+    
+    // Correspondance exacte avec les exports de Showdown
+    if (varName === "BattleMovesText") { officialVar = "MovesText"; typeStr = "MoveText"; }
+    if (varName === "BattleAbilitiesText") { officialVar = "AbilitiesText"; typeStr = "AbilityText"; }
 
-    if (!text) return `export const ${varName}: {[k: string]: ${typeStr}} = {};`;
+    if (!text) return `export const ${officialVar}: {[k: string]: ${typeStr}} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -222,7 +225,7 @@ function parseTextToJS(text, varName) {
         }
     }
 
-    let output = `export const ${varName}: {[k: string]: ${typeStr}} = {\n`;
+    let output = `export const ${officialVar}: {[k: string]: ${typeStr}} = {\n`;
     for (const [id, entry] of Object.entries(dict)) {
         output += `\t"${id}": {\n`;
         if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
