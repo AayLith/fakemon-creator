@@ -14,19 +14,212 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 // Utilitaire basique pour nettoyer le TypeScript brut de Showdown et extraire l'objet
-function parseShowdownTS(tsContent) {
+/*function parseShowdownTS(tsContent) {
     try {
-        // Supprime les exports et types TypeScript pour isoler l'objet JS
-        let jsonText = tsContent
-            .replace(/export\s+const\s+\w+\s*(:\s*[^=]+)?\s*=\s*/g, '')
-            .replace(/;\s*$/, '')
-            .trim();
-        // Une évaluation sécurisée basique ou un nettoyage plus profond peut être requis selon le fichier,
-        // Pour l'exemple, on renvoie une structure épurée exploitable en frontend.
+        if (!tsContent || typeof tsContent !== 'string') return "{}";
+
+        // 1. On cherche d'abord le signe '=' de l'assignation
+        const equalIndex = tsContent.indexOf('=');
+        if (equalIndex === -1) return "{}";
+
+        // 2. Le vrai début de l'objet est la première accolade APRÈS le signe '='
+        const firstBrace = tsContent.indexOf('{', equalIndex);
+        const lastBrace = tsContent.lastIndexOf('}');
+
+        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
+            return "{}";
+        }
+
+        // 3. Extraction de l'objet JavaScript propre
+        let jsonText = tsContent.slice(firstBrace, lastBrace + 1).trim();
+        
         return jsonText;
+    } catch (e) {
+        console.error("Erreur lors du parsing du fichier Showdown :", e);
+        return "{}";
+    }
+}*/
+
+// Analyseur pour vos fichiers de Pet Mod personnalisés (pokedex, learnsets, etc.)
+function parseCustomModTS(tsContent) {
+    try {
+        if (!tsContent || typeof tsContent !== 'string') return "{}";
+        const equalIndex = tsContent.indexOf('=');
+        if (equalIndex === -1) return "{}";
+        const firstBrace = tsContent.indexOf('{', equalIndex);
+        const lastBrace = tsContent.lastIndexOf('}');
+        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) return "{}";
+        return tsContent.slice(firstBrace, lastBrace + 1).trim();
     } catch (e) {
         return "{}";
     }
+}
+
+// Extracteur de métadonnées pour le fichier moves.ts de Smogon
+function parseMovesToJSON(text) {
+    const moves = {};
+    if (!text) return "{}";
+    const lines = text.split('\n');
+    let currentId = null;
+    let currentMove = null;
+    let depth = 0;
+
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+
+        if (!currentId) {
+            const startMatch = line.match(/^['"]?([a-zA-Z0-9_-]+)['"]?:\s*\{/);
+            if (startMatch) {
+                const id = startMatch[1];
+                // Évite de confondre un sous-ensemble (comme flags) avec une attaque
+                if (!['flags', 'secondary', 'boosts', 'baseStats', 'abilities', 'types', 'learnset'].includes(id)) {
+                    currentId = id;
+                    currentMove = {};
+                    depth = 1;
+                    continue;
+                }
+            }
+        }
+
+        if (currentId && currentMove) {
+            depth += openBraces - closeBraces;
+            if (depth <= 0) {
+                if (currentMove.name || currentId) moves[currentId] = currentMove;
+                currentId = null;
+                currentMove = null;
+                continue;
+            }
+
+            if (depth === 1) {
+                if (line.startsWith('name:')) {
+                    const m = line.match(/name:\s*["']([^"']+)["']/);
+                    if (m) currentMove.name = m[1];
+                } else if (line.startsWith('type:')) {
+                    const m = line.match(/type:\s*["']([^"']+)["']/);
+                    if (m) currentMove.type = m[1];
+                } else if (line.startsWith('category:')) {
+                    const m = line.match(/category:\s*["']([^"']+)["']/);
+                    if (m) currentMove.category = m[1];
+                } else if (line.startsWith('basePower:')) {
+                    const m = line.match(/basePower:\s*([0-9]+)/);
+                    if (m) currentMove.basePower = parseInt(m[1], 10);
+                } else if (line.startsWith('accuracy:')) {
+                    if (line.includes('true')) {
+                        currentMove.accuracy = true;
+                    } else {
+                        const m = line.match(/accuracy:\s*([0-9]+)/);
+                        if (m) currentMove.accuracy = parseInt(m[1], 10);
+                    }
+                }
+            }
+        }
+    }
+    return JSON.stringify(moves);
+}
+
+// Extracteur de métadonnées pour le fichier abilities.ts de Smogon
+function parseAbilitiesToJSON(text) {
+    const abilities = {};
+    if (!text) return "{}";
+    const lines = text.split('\n');
+    let currentId = null;
+    let currentAbility = null;
+    let depth = 0;
+
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+
+        if (!currentId) {
+            const startMatch = line.match(/^['"]?([a-zA-Z0-9_-]+)['"]?:\s*\{/);
+            if (startMatch) {
+                const id = startMatch[1];
+                if (!['flags', 'secondary', 'boosts', 'baseStats', 'abilities', 'types', 'learnset'].includes(id)) {
+                    currentId = id;
+                    currentAbility = {};
+                    depth = 1;
+                    continue;
+                }
+            }
+        }
+
+        if (currentId && currentAbility) {
+            depth += openBraces - closeBraces;
+            if (depth <= 0) {
+                if (currentAbility.name || currentId) abilities[currentId] = currentAbility;
+                currentId = null;
+                currentAbility = null;
+                continue;
+            }
+
+            if (depth === 1) {
+                if (line.startsWith('name:')) {
+                    const m = line.match(/name:\s*["']([^"']+)["']/);
+                    if (m) currentAbility.name = m[1];
+                }
+            }
+        }
+    }
+    return JSON.stringify(abilities);
+}
+
+// Extracteur pour les fichiers de dictionnaires texte (text/moves.ts et text/abilities.ts)
+function parseTextToJSON(text) {
+    const dict = {};
+    if (!text) return "{}";
+    const lines = text.split('\n');
+    let currentId = null;
+    let currentEntry = null;
+    let depth = 0;
+
+    for (let line of lines) {
+        line = line.trim();
+        if (!line) continue;
+
+        const openBraces = (line.match(/\{/g) || []).length;
+        const closeBraces = (line.match(/\}/g) || []).length;
+
+        if (!currentId) {
+            const startMatch = line.match(/^['"]?([a-zA-Z0-9_-]+)['"]?:\s*\{/);
+            if (startMatch) {
+                currentId = startMatch[1];
+                currentEntry = {};
+                depth = 1;
+                continue;
+            }
+        }
+
+        if (currentId && currentEntry) {
+            depth += openBraces - closeBraces;
+            if (depth <= 0) {
+                dict[currentId] = currentEntry;
+                currentId = null;
+                currentEntry = null;
+                continue;
+            }
+
+            if (depth === 1) {
+                if (line.startsWith('name:')) {
+                    const m = line.match(/name:\s*["'\`](.*)["'\`]/);
+                    if (m) currentEntry.name = m[1];
+                } else if (line.startsWith('desc:')) {
+                    const m = line.match(/desc:\s*["'\`](.*)["'\`]/);
+                    if (m) currentEntry.desc = m[1];
+                } else if (line.startsWith('shortDesc:')) {
+                    const m = line.match(/shortDesc:\s*["'\`](.*)["'\`]/);
+                    if (m) currentEntry.shortDesc = m[1];
+                }
+            }
+        }
+    }
+    return JSON.stringify(dict);
 }
 
 // API : Charger les données globales depuis le dépôt officiel GitHub de Showdown (Gen 9)
@@ -122,15 +315,15 @@ app.post('/api/load-mod', async (req, res) => {
             fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())   // 🌟 Nouveau : Textes des talents
         ]);
 
-        res.json({
+		res.json({
             success: true,
-            pokedex: parseShowdownTS(pokedexRes),
-            formatsData: parseShowdownTS(formatsRes),
-            learnsets: parseShowdownTS(learnsetsRes),
-            moves: parseShowdownTS(movesRes),
-            abilities: parseShowdownTS(abilitiesRes),
-            movesText: parseShowdownTS(movesTextRes),         // 🌟 Transmis au client
-            abilitiesText: parseShowdownTS(abilitiesTextRes)   // 🌟 Transmis au client
+            pokedex: parseCustomModTS(pokedexRes),
+            formatsData: parseCustomModTS(formatsRes),
+            learnsets: parseCustomModTS(learnsetsRes),
+            moves: parseMovesToJSON(movesRes),                  // 🌟 Utilise le nouveau filtre
+            abilities: parseAbilitiesToJSON(abilitiesRes),      // 🌟 Utilise le nouveau filtre
+            movesText: parseTextToJSON(movesTextRes),           // 🌟 Utilise le nouveau filtre
+            abilitiesText: parseTextToJSON(abilitiesTextRes)    // 🌟 Utilise le nouveau filtre
         });
     } catch (error) {
         res.status(500).send(`Erreur interne du serveur : ${error.message}`);

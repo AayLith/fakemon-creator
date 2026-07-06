@@ -185,30 +185,37 @@
 					db.pokedex = new Function(`return ${data.pokedex}`)();
 					db.formatsData = new Function(`return ${data.formatsData}`)();
 					db.learnsets = new Function(`return ${data.learnsets}`)();
+					// db.moves = new Function(`return ${data.moves}`)();
+					// db.abilities = new Function(`return ${data.abilities}`)();
 					
-					// 1. Extraction temporaire des dictionnaires de texte reçus
 					const movesText = new Function(`return ${data.movesText}`)();
 					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
 					
-					// 2. Fusion des descriptions dans le dictionnaire des Talents
-					Object.keys(db.abilities).forEach(id => {
-						if (abilitiesText && abilitiesText[id]) {
+					// 1. On s'assure que tous les talents de text/abilities.ts sont référencés
+					if (abilitiesText) {
+						Object.keys(abilitiesText).forEach(id => {
+							if (!db.abilities[id]) {
+								db.abilities[id] = { name: abilitiesText[id].name || id };
+							}
 							db.abilities[id].desc = abilitiesText[id].desc || "";
 							db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
-						}
-					});
+						});
+					}
 
-					// 3. Fusion des descriptions dans le dictionnaire des Attaques
-					Object.keys(db.moves).forEach(id => {
-						if (movesText && movesText[id]) {
+					// 2. On s'assure que toutes les attaques de text/moves.ts sont référencées
+					if (movesText) {
+						Object.keys(movesText).forEach(id => {
+							if (!db.moves[id]) {
+								db.moves[id] = { name: movesText[id].name || id };
+							}
 							db.moves[id].desc = movesText[id].desc || "";
 							db.moves[id].shortDesc = movesText[id].shortDesc || "";
-						}
-					});
+						});
+					}
 					
 					buildUILists();
 					renderPokemonSidebar();
-					alert("✅ Données et descriptions chargées avec succès !");
+					alert("✅ Données, talents et descriptions synchronisés avec succès !");
 				} else {
 					alert(`❌ Échec du serveur : ${data.error}`);
 				}
