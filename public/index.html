@@ -75,11 +75,16 @@
                             <!-- Généré via JS -->
                         </div>
                     </div>
+					<div class="flex justify-between items-center mb-2">
+						<button onclick="randomizeStats()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition">
+							🎲 Random
+						</button>
+					</div>
 
                     <!-- CALCULATEUR DE FAIBLESSES DYNAMIQUE -->
                     <div>
                         <h4 class="text-sm font-bold text-gray-400 mb-2">Profil Défensif (Faiblesses & Résistances)</h4>
-                        <div id="typeMatchups" class="grid grid-cols-6 gap-1 text-center text-xs"></div>
+                        <div id="typeMatchups" class="grid grid-cols-3 gap-1 text-center text-xs"></div>
                     </div>
                 </section>
 
@@ -94,7 +99,7 @@
 
                     <div>
                         <h4 class="font-bold text-gray-300 mb-1">Attaques du Pool (Learnset)</h4>
-                        <div id="selectedMoves" class="grid grid-cols-2 gap-2 max-h-[800px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+                        <div id="selectedMoves" class="grid grid-cols-1 gap-2 max-h-[800px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
                     </div>
 				</section>
 				
@@ -295,7 +300,7 @@
 				const mv = db.moves[id];
 				// Récupération de la description fraîchement fusionnée
 				const description = mv.shortDesc || mv.desc || "Aucune description disponible.";
-				const category = mv.category || "Status";
+				const category = mv.category || "Error";
 
 				container.innerHTML += `
 					<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">
@@ -533,29 +538,35 @@
             reader.readAsDataURL(file);
         }
 
-        function calculateWeaknesses() {
-            const container = document.getElementById('typeMatchups');
-            container.innerHTML = "";
-            const myTypes = db.pokedex[activeId].types;
+		function calculateWeaknesses() {
+			const container = document.getElementById('typeMatchups');
+			container.innerHTML = "";
+			const myTypes = db.pokedex[activeId].types;
 
-            Object.keys(typeChart).forEach(atkType => {
-                let multiplier = 1;
-                myTypes.forEach(defType => {
-                    if (typeChart[atkType] && typeChart[atkType][defType] !== undefined) {
-                        multiplier *= typeChart[atkType][defType];
-                    }
-                });
+			Object.keys(typeChart).forEach(atkType => {
+				let multiplier = 1;
+				myTypes.forEach(defType => {
+					if (typeChart[atkType] && typeChart[atkType][defType] !== undefined) {
+						multiplier *= typeChart[atkType][defType];
+					}
+				});
 
-                if(multiplier !== 1) {
-                    let color = "bg-gray-700 text-gray-400";
-                    if(multiplier >= 2) color = "bg-red-900 text-red-200 font-bold";
-                    if(multiplier <= 0.5 && multiplier > 0) color = "bg-green-900 text-green-200";
-                    if(multiplier === 0) color = "bg-black text-purple-400 font-bold";
+				if(multiplier !== 1) {
+					let color = "bg-gray-700 text-gray-400";
+					if(multiplier >= 2) color = "bg-red-900 text-red-200 font-bold";
+					if(multiplier <= 0.5 && multiplier > 0) color = "bg-green-900 text-green-200";
+					if(multiplier === 0) color = "bg-black text-purple-400 font-bold";
 
-                    container.innerHTML += `<div class="${color} p-1 rounded border border-gray-700">${atkType}<br>x${multiplier}</div>`;
-                }
-            });
-        }
+					// On remplace l'affichage du texte par le sprite via la fonction getTypeSprite
+					// Note : on garde le multiplicateur en texte en dessous
+					container.innerHTML += `
+						<div class="${color} p-1 rounded border border-gray-700 flex flex-col items-center justify-center">
+							${getTypeSprite(atkType)}
+							<span class="text-[9px] mt-1">x${multiplier}</span>
+						</div>`;
+				}
+			});
+		}
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -588,6 +599,36 @@
                 item.style.display = text.includes(query) ? "" : "none";
             });
         }
+		
+		function randomizeStats() {
+			if (!activeId) return;
+
+			const stats = db.pokedex[activeId].baseStats;
+			const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+
+			statKeys.forEach(k => {
+				// Génère un nombre entre -10 et 10
+				const variation = Math.floor(Math.random() * 21) - 10;
+				let newValue = stats[k] + variation;
+
+				// On borne les valeurs entre 1 et 255 (standards Pokémon)
+				newValue = Math.max(1, Math.min(255, newValue));
+				
+				stats[k] = newValue;
+			});
+
+			// Rafraîchir l'affichage
+			// On rappelle selectPokemon ou simplement la partie stats
+			const statsContainer = document.getElementById('statsContainer');
+			statsContainer.innerHTML = "";
+			statKeys.forEach(k => {
+				statsContainer.innerHTML += `
+					<div>
+						<label class="text-xs text-gray-400 uppercase font-bold">${k}</label>
+						<input type="number" value="${stats[k]}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
+					</div>`;
+			});
+		}
     </script>
 </body>
 </html>
