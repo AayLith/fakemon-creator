@@ -13,32 +13,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
-// Utilitaire basique pour nettoyer le TypeScript brut de Showdown et extraire l'objet
-/*function parseShowdownTS(tsContent) {
-    try {
-        if (!tsContent || typeof tsContent !== 'string') return "{}";
-
-        // 1. On cherche d'abord le signe '=' de l'assignation
-        const equalIndex = tsContent.indexOf('=');
-        if (equalIndex === -1) return "{}";
-
-        // 2. Le vrai début de l'objet est la première accolade APRÈS le signe '='
-        const firstBrace = tsContent.indexOf('{', equalIndex);
-        const lastBrace = tsContent.lastIndexOf('}');
-
-        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) {
-            return "{}";
-        }
-
-        // 3. Extraction de l'objet JavaScript propre
-        let jsonText = tsContent.slice(firstBrace, lastBrace + 1).trim();
-        
-        return jsonText;
-    } catch (e) {
-        console.error("Erreur lors du parsing du fichier Showdown :", e);
-        return "{}";
-    }
-}*/
 
 // Analyseur pour vos fichiers de Pet Mod personnalisés (pokedex, learnsets, etc.)
 function parseCustomModTS(tsContent) {
