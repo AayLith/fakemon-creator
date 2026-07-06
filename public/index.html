@@ -201,8 +201,8 @@
 					db.pokedex = new Function(`return ${data.pokedex}`)();
 					db.formatsData = new Function(`return ${data.formatsData}`)();
 					db.learnsets = new Function(`return ${data.learnsets}`)();
-					// db.moves = new Function(`return ${data.moves}`)();
-					// db.abilities = new Function(`return ${data.abilities}`)();
+					db.moves = new Function(`return ${data.moves}`)();
+					db.abilities = new Function(`return ${data.abilities}`)();
 					
 					const movesText = new Function(`return ${data.movesText}`)();
 					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
@@ -236,7 +236,6 @@
 					alert(`❌ Échec du serveur : ${data.error}`);
 				}
 			} catch (err) {
-				// AJOUT CRUCIAL : On affiche la vraie erreur dans la console F12 du navigateur
 				console.error("Détails du crash :", err);
 				alert(`❌ Erreur : ${err.message}. Ouvrez la console (F12) pour voir les détails.`);
 			} finally {
@@ -465,22 +464,11 @@
 
 				div.innerHTML += `
 					<div class="bg-gray-700 border border-gray-600 p-2 rounded text-xs flex flex-col justify-between space-y-1.5 relative">
-						<div class="flex justify-between items-start gap-1 pr-4">
-							<div>
-								<span class="font-bold text-white block">${mv.name}</span>
-								<div class="flex gap-1 mt-0.5 text-[9px] font-semibold uppercase">
-									<span class="px-1 bg-gray-900 text-gray-300 rounded">${mv.type}</span>
-									<span class="px-1 rounded ${catColor}">${category}</span>
-								</div>
-							</div>
-							<div class="text-right text-[10px] text-gray-400 font-mono leading-none">
-								<div>Pwr: <span class="text-white font-bold">${power}</span></div>
-								<div class="mt-0.5">Acc: <span class="text-white font-bold">${accuracy}</span></div>
-							</div>
+						<div class="flex justify-between font-bold">
+							<span class="text-white">${mv.name} <span class="text-[10px] px-1 py-0.2 bg-gray-800 rounded text-gray-300 ml-1">${mv.type} - ${category}</span></span>
+							<span class="text-gray-300">Pwr: ${mv.basePower || 0} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
 						</div>
-						<div class="text-[10px] text-gray-400 pt-1 border-t border-gray-600/50 truncate" title="${description}">
-							${description}
-						</div>
+						<div class="text-gray-400 text-[11px] truncate">${description}</div>
 						<button onclick="removeMove('${moveId}')" class="absolute top-1 right-1.5 text-red-400 hover:text-red-200 font-bold text-sm">×</button>
 					</div>`;
 			});

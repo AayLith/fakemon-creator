@@ -127,8 +127,8 @@ app.post('/api/load-mod', async (req, res) => {
             fetchFileWithFallback(`${baseUrl}/pokedex.ts`, 'export const Pokedex = {};'),
             fetchFileWithFallback(`${baseUrl}/formats-data.ts`, 'export const FormatsData = {};'),
             fetchFileWithFallback(`${baseUrl}/learnsets.ts`, 'export const Learnsets = {};'),
-            fetch(`${smogonBaseUrl}/moves.ts`).then(r => r.text()),
-            fetch(`${smogonBaseUrl}/abilities.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/moves.ts`, 'export const moves = {};'),
+            fetch(`${smogonBaseUrl}/abilities.ts`, 'export const abilities = {};'),
             fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),       // 🌟 Nouveau : Textes des attaques
             fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())   // 🌟 Nouveau : Textes des talents
         ]);
