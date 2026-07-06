@@ -14,30 +14,22 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur universel : nettoie les types TS mais préserve STRICTEMENT le "export const" initial
+// Analyseur universel : préserve STRICTEMENT le format et les types d'origine
 function parseCustomModTS(tsContent, defaultVar) {
     try {
-        if (!tsContent || typeof tsContent !== 'string') return `export const ${defaultVar} = {};`;
-        
-        const equalIndex = tsContent.indexOf('=');
-        if (equalIndex === -1) return tsContent;
-        
-        let declaration = tsContent.slice(0, equalIndex);
-        const colonIndex = declaration.indexOf(':');
-        if (colonIndex !== -1 && colonIndex > declaration.indexOf('const')) {
-            declaration = declaration.slice(0, colonIndex);
+        if (!tsContent || typeof tsContent !== 'string') {
+            return `export const ${defaultVar}: {[k: string]: any} = {};`;
         }
-        
-        return declaration + '=' + tsContent.slice(equalIndex + 1);
+        return tsContent;
     } catch (e) {
-        return `export const ${defaultVar} = {};`;
+        return `export const ${defaultVar}: {[k: string]: any} = {};`;
     }
 }
 
-// Reconstruit "moves.ts" au format Showdown épuré et ultra-compatible
+// Reconstruit "moves.ts" avec la signature de type officielle Showdown
 function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "export const BattleMovedex = {};";
+    if (!text) return "export const BattleMovedex: {[moveid: string]: MoveData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -103,7 +95,7 @@ function parseMovesToJS(text) {
         }
     }
 
-    let output = "export const BattleMovedex = {\n";
+    let output = "export const BattleMovedex: {[moveid: string]: MoveData} = {\n";
     for (const [id, move] of Object.entries(moves)) {
         output += `\t"${id}": {\n`;
         if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
@@ -119,10 +111,10 @@ function parseMovesToJS(text) {
     return output;
 }
 
-// Reconstruit "abilities.ts" au format standard strict
+// Reconstruit "abilities.ts" avec la signature de type officielle Showdown
 function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "export const BattleAbilities = {};";
+    if (!text) return "export const BattleAbilities: {[abilityid: string]: AbilityData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -166,7 +158,7 @@ function parseAbilitiesToJS(text) {
         }
     }
 
-    let output = "export const BattleAbilities = {\n";
+    let output = "export const BattleAbilities: {[abilityid: string]: AbilityData} = {\n";
     for (const [id, ability] of Object.entries(abilities)) {
         output += `\t"${id}": {\n`;
         if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
@@ -176,10 +168,14 @@ function parseAbilitiesToJS(text) {
     return output;
 }
 
-// Reconstruit les fichiers textes régionaux au format standard strict
+// Reconstruit les fichiers textes avec la signature de type attendue
 function parseTextToJS(text, varName) {
     const dict = {};
-    if (!text) return `export const ${varName} = {};`;
+    let typeStr = "any";
+    if (varName === "BattleMovesText") typeStr = "MoveText";
+    if (varName === "BattleAbilitiesText") typeStr = "AbilityText";
+
+    if (!text) return `export const ${varName}: {[k: string]: ${typeStr}} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -226,7 +222,7 @@ function parseTextToJS(text, varName) {
         }
     }
 
-    let output = `export const ${varName} = {\n`;
+    let output = `export const ${varName}: {[k: string]: ${typeStr}} = {\n`;
     for (const [id, entry] of Object.entries(dict)) {
         output += `\t"${id}": {\n`;
         if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
