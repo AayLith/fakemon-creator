@@ -14,25 +14,34 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur pour vos fichiers de Pet Mod personnalisés (pokedex, learnsets, etc.)
-function parseCustomModTS(tsContent) {
+// Analyseur universel modifié pour remplacer "export const" par "var"
+function parseCustomModTS(tsContent, defaultVar) {
     try {
-        if (!tsContent || typeof tsContent !== 'string') return "{}";
-        const equalIndex = tsContent.indexOf('=');
-        if (equalIndex === -1) return "{}";
-        const firstBrace = tsContent.indexOf('{', equalIndex);
-        const lastBrace = tsContent.lastIndexOf('}');
-        if (firstBrace === -1 || lastBrace === -1 || firstBrace >= lastBrace) return "{}";
-        return tsContent.slice(firstBrace, lastBrace + 1).trim();
+        if (!tsContent || typeof tsContent !== 'string') return `var ${defaultVar} = {};`;
+        
+        // On remplace le mot-clé export par var pour éviter le crash de l'eval()
+        let cleanContent = tsContent.replace(/^\s*export\s+const\s+/, 'var ');
+        cleanContent = cleanContent.replace(/^\s*export\s+let\s+/, 'var ');
+        
+        const equalIndex = cleanContent.indexOf('=');
+        if (equalIndex === -1) return cleanContent;
+        
+        let declaration = cleanContent.slice(0, equalIndex);
+        const colonIndex = declaration.indexOf(':');
+        if (colonIndex !== -1) {
+            declaration = declaration.slice(0, colonIndex);
+        }
+        
+        return declaration + '=' + cleanContent.slice(equalIndex + 1);
     } catch (e) {
-        return "{}";
+        return `var ${defaultVar} = {};`;
     }
 }
 
-// Extracteur de métadonnées pour le fichier moves.ts de Smogon
-function parseMovesToJSON(text) {
+// Reconstruit "moves.ts" avec des variables standards 'var'
+function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "{}";
+    if (!text) return "var BattleMovedex = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -49,7 +58,6 @@ function parseMovesToJSON(text) {
             const startMatch = line.match(/^['"]?([a-zA-Z0-9_-]+)['"]?:\s*\{/);
             if (startMatch) {
                 const id = startMatch[1];
-                // Évite de confondre un sous-ensemble (comme flags) avec une attaque
                 if (!['flags', 'secondary', 'boosts', 'baseStats', 'abilities', 'types', 'learnset'].includes(id)) {
                     currentId = id;
                     currentMove = {};
@@ -69,36 +77,56 @@ function parseMovesToJSON(text) {
             }
 
             if (depth === 1) {
-                if (line.startsWith('name:')) {
-                    const m = line.match(/name:\s*["']([^"']+)["']/);
+                if (/^name\s*:/ .test(line)) {
+                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.name = m[1];
-                } else if (line.startsWith('type:')) {
-                    const m = line.match(/type:\s*["']([^"']+)["']/);
+                } else if (/^type\s*:/ .test(line)) {
+                    const m = line.match(/type\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.type = m[1];
-                } else if (line.startsWith('category:')) {
-                    const m = line.match(/category:\s*["']([^"']+)["']/);
+                } else if (/^category\s*:/ .test(line)) {
+                    const m = line.match(/category\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentMove.category = m[1];
-                } else if (line.startsWith('basePower:')) {
-                    const m = line.match(/basePower:\s*([0-9]+)/);
+                } else if (/^basePower\s*:/ .test(line)) {
+                    const m = line.match(/basePower\s*:\s*([0-9]+)/);
                     if (m) currentMove.basePower = parseInt(m[1], 10);
-                } else if (line.startsWith('accuracy:')) {
+                } else if (/^accuracy\s*:/ .test(line)) {
                     if (line.includes('true')) {
                         currentMove.accuracy = true;
                     } else {
-                        const m = line.match(/accuracy:\s*([0-9]+)/);
+                        const m = line.match(/accuracy\s*:\s*([0-9]+)/);
                         if (m) currentMove.accuracy = parseInt(m[1], 10);
                     }
+                } else if (/^pp\s*:/ .test(line)) {
+                    const m = line.match(/pp\s*:\s*([0-9]+)/);
+                    if (m) currentMove.pp = parseInt(m[1], 10);
+                } else if (/^priority\s*:/ .test(line)) {
+                    const m = line.match(/priority\s*:\s*(-?[0-9]+)/);
+                    if (m) currentMove.priority = parseInt(m[1], 10);
                 }
             }
         }
     }
-    return JSON.stringify(moves);
+
+    let output = "var BattleMovedex = {\n";
+    for (const [id, move] of Object.entries(moves)) {
+        output += `\t"${id}": {\n`;
+        if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
+        if (move.type !== undefined) output += `\t\ttype: ${JSON.stringify(move.type)},\n`;
+        if (move.category !== undefined) output += `\t\tcategory: ${JSON.stringify(move.category)},\n`;
+        if (move.basePower !== undefined) output += `\t\tbasePower: ${move.basePower},\n`;
+        if (move.accuracy !== undefined) output += `\t\taccuracy: ${move.accuracy},\n`;
+        if (move.pp !== undefined) output += `\t\tpp: ${move.pp},\n`;
+        if (move.priority !== undefined) output += `\t\tpriority: ${move.priority},\n`;
+        output += `\t},\n`;
+    }
+    output += "};\nvar Moves = BattleMovedex;";
+    return output;
 }
 
-// Extracteur de métadonnées pour le fichier abilities.ts de Smogon
-function parseAbilitiesToJSON(text) {
+// Reconstruit "abilities.ts" avec des variables standards 'var'
+function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "{}";
+    if (!text) return "var BattleAbilities = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -134,20 +162,28 @@ function parseAbilitiesToJSON(text) {
             }
 
             if (depth === 1) {
-                if (line.startsWith('name:')) {
-                    const m = line.match(/name:\s*["']([^"']+)["']/);
+                if (/^name\s*:/ .test(line)) {
+                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentAbility.name = m[1];
                 }
             }
         }
     }
-    return JSON.stringify(abilities);
+
+    let output = "var BattleAbilities = {\n";
+    for (const [id, ability] of Object.entries(abilities)) {
+        output += `\t"${id}": {\n`;
+        if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
+        output += `\t},\n`;
+    }
+    output += "};\nvar Abilities = BattleAbilities;";
+    return output;
 }
 
-// Extracteur pour les fichiers de dictionnaires texte (text/moves.ts et text/abilities.ts)
-function parseTextToJSON(text) {
+// Reconstruit les fichiers textes avec des variables standards 'var'
+function parseTextToJS(text, varName) {
     const dict = {};
-    if (!text) return "{}";
+    if (!text) return `var ${varName} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -180,20 +216,32 @@ function parseTextToJSON(text) {
             }
 
             if (depth === 1) {
-                if (line.startsWith('name:')) {
-                    const m = line.match(/name:\s*["'\`](.*)["'\`]/);
+                if (/^name\s*:/ .test(line)) {
+                    const m = line.match(/name\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.name = m[1];
-                } else if (line.startsWith('desc:')) {
-                    const m = line.match(/desc:\s*["'\`](.*)["'\`]/);
+                } else if (/^desc\s*:/ .test(line)) {
+                    const m = line.match(/desc\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.desc = m[1];
-                } else if (line.startsWith('shortDesc:')) {
-                    const m = line.match(/shortDesc:\s*["'\`](.*)["'\`]/);
+                } else if (/^shortDesc\s*:/ .test(line)) {
+                    const m = line.match(/shortDesc\s*:\s*["'`](.*?)["'`]/);
                     if (m) currentEntry.shortDesc = m[1];
                 }
             }
         }
     }
-    return JSON.stringify(dict);
+
+    let output = `var ${varName} = {\n`;
+    for (const [id, entry] of Object.entries(dict)) {
+        output += `\t"${id}": {\n`;
+        if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
+        if (entry.desc !== undefined) output += `\t\tdesc: ${JSON.stringify(entry.desc)},\n`;
+        if (entry.shortDesc !== undefined) output += `\t\tshortDesc: ${JSON.stringify(entry.shortDesc)},\n`;
+        output += `\t},\n`;
+    }
+    output += "};\n";
+    if (varName === "BattleMovesText") output += "var MovesText = BattleMovesText;";
+    if (varName === "BattleAbilitiesText") output += "var AbilitiesText = BattleAbilitiesText;";
+    return output;
 }
 
 // API : Charger les données globales depuis le dépôt officiel GitHub de Showdown (Gen 9)
@@ -291,13 +339,13 @@ app.post('/api/load-mod', async (req, res) => {
 
 		res.json({
             success: true,
-            pokedex: parseCustomModTS(pokedexRes),
-            formatsData: parseCustomModTS(formatsRes),
-            learnsets: parseCustomModTS(learnsetsRes),
-            moves: parseMovesToJSON(movesRes),                  // 🌟 Utilise le nouveau filtre
-            abilities: parseAbilitiesToJSON(abilitiesRes),      // 🌟 Utilise le nouveau filtre
-            movesText: parseTextToJSON(movesTextRes),           // 🌟 Utilise le nouveau filtre
-            abilitiesText: parseTextToJSON(abilitiesTextRes)    // 🌟 Utilise le nouveau filtre
+			pokedex: parseCustomModTS(pokedexRes, "BattlePokedex"),
+            formatsData: parseCustomModTS(formatsRes, "BattleFormatsData"),
+            learnsets: parseCustomModTS(learnsetsRes, "BattleLearnsets"),
+            moves: parseMovesToJS(movesRes),
+            abilities: parseAbilitiesToJS(abilitiesRes),
+            movesText: parseTextToJS(movesTextRes, "BattleMovesText"),
+            abilitiesText: parseTextToJS(abilitiesTextRes, "BattleAbilitiesText")
         });
     } catch (error) {
         res.status(500).send(`Erreur interne du serveur : ${error.message}`);
