@@ -14,27 +14,44 @@ const EXPORT_DIR = path.join(__dirname, 'exports');
 if (!fs.existsSync(EXPORT_DIR)) fs.mkdirSync(EXPORT_DIR);
 
 
-// Analyseur universel : nettoie TOUT type TS pour correspondre à la Regex "export const Variable = "
+// Analyseur universel : recrée ou préserve STRICTEMENT les en-têtes typés officiels de Showdown
 function parseCustomModTS(tsContent, defaultVar) {
     try {
         if (!tsContent || typeof tsContent !== 'string') {
-            return `export const ${defaultVar} = {};`;
+            return `export const ${defaultVar}: {[k: string]: any} = {};`;
         }
+        
         const equalIndex = tsContent.indexOf('=');
         if (equalIndex !== -1) {
-            // Force le format strict : "export const NomVar = ..."
-            return `export const ${defaultVar} = ` + tsContent.slice(equalIndex + 1).trim();
+            let varName = defaultVar;
+            const match = tsContent.match(/export\s+const\s+([a-zA-Z0-9_]+)/);
+            if (match) {
+                varName = match[1];
+            }
+            
+            // Génération de l'en-tête exact attendu par la Regex du studio
+            let header = `export const ${varName}: {[k: string]: any} = `;
+            if (varName === 'Moves') header = 'export const Moves: {[moveid: string]: MoveData} = ';
+            if (varName === 'Abilities') header = 'export const Abilities: {[abilityid: string]: AbilityData} = ';
+            if (varName === 'BattlePokedex' || varName === 'Pokedex') header = 'export const BattlePokedex: {[speciesid: string]: SpeciesData} = ';
+            if (varName === 'Items') header = 'export const Items: {[itemid: string]: ItemData} = ';
+            if (varName === 'BattleFormatsData' || varName === 'FormatsData') header = 'export const BattleFormatsData: {[speciesid: string]: SpeciesFormatsData} = ';
+            if (varName === 'MovesText') header = 'export const MovesText: {[k: string]: MoveText} = ';
+            if (varName === 'AbilitiesText') header = 'export const AbilitiesText: {[k: string]: AbilityText} = ';
+            
+            return header + tsContent.slice(equalIndex + 1).trim();
         }
-        return `export const ${defaultVar} = {};`;
+        
+        return tsContent;
     } catch (e) {
-        return `export const ${defaultVar} = {};`;
+        return `export const ${defaultVar}: {[k: string]: any} = {};`;
     }
 }
 
-// Reconstruit "moves.ts" au format ES6 pur (sans type TS)
+// Reconstruit "moves.ts" avec l'en-tête officiel strict
 function parseMovesToJS(text) {
     const moves = {};
-    if (!text) return "export const Moves = {};";
+    if (!text) return "export const Moves: {[moveid: string]: MoveData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentMove = null;
@@ -100,7 +117,7 @@ function parseMovesToJS(text) {
         }
     }
 
-    let output = "export const Moves = {\n";
+    let output = "export const Moves: {[moveid: string]: MoveData} = {\n";
     for (const [id, move] of Object.entries(moves)) {
         output += `\t"${id}": {\n`;
         if (move.name !== undefined) output += `\t\tname: ${JSON.stringify(move.name)},\n`;
@@ -116,10 +133,10 @@ function parseMovesToJS(text) {
     return output;
 }
 
-// Reconstruit "abilities.ts" au format ES6 pur
+// Reconstruit "abilities.ts" avec l'en-tête officiel strict
 function parseAbilitiesToJS(text) {
     const abilities = {};
-    if (!text) return "export const Abilities = {};";
+    if (!text) return "export const Abilities: {[abilityid: string]: AbilityData} = {};";
     const lines = text.split('\n');
     let currentId = null;
     let currentAbility = null;
@@ -163,7 +180,7 @@ function parseAbilitiesToJS(text) {
         }
     }
 
-    let output = "export const Abilities = {\n";
+    let output = "export const Abilities: {[abilityid: string]: AbilityData} = {\n";
     for (const [id, ability] of Object.entries(abilities)) {
         output += `\t"${id}": {\n`;
         if (ability.name !== undefined) output += `\t\tname: ${JSON.stringify(ability.name)},\n`;
@@ -173,15 +190,16 @@ function parseAbilitiesToJS(text) {
     return output;
 }
 
-// Reconstruit les fichiers textes au format ES6 pur
+// Reconstruit les fichiers textes régionaux avec l'en-tête officiel strict
 function parseTextToJS(text, varName) {
     const dict = {};
     let officialVar = varName;
+    let typeStr = "any";
     
-    if (varName === "BattleMovesText") officialVar = "MovesText";
-    if (varName === "BattleAbilitiesText") officialVar = "AbilitiesText";
+    if (varName === "BattleMovesText" || varName === "MovesText") { officialVar = "MovesText"; typeStr = "MoveText"; }
+    if (varName === "BattleAbilitiesText" || varName === "AbilitiesText") { officialVar = "AbilitiesText"; typeStr = "AbilityText"; }
 
-    if (!text) return `export const ${officialVar} = {};`;
+    if (!text) return `export const ${officialVar}: {[k: string]: ${typeStr}} = {};`;
     const lines = text.split('\n');
     let currentId = null;
     let currentEntry = null;
@@ -228,7 +246,7 @@ function parseTextToJS(text, varName) {
         }
     }
 
-    let output = `export const ${officialVar} = {\n`;
+    let output = `export const ${officialVar}: {[k: string]: ${typeStr}} = {\n`;
     for (const [id, entry] of Object.entries(dict)) {
         output += `\t"${id}": {\n`;
         if (entry.name !== undefined) output += `\t\tname: ${JSON.stringify(entry.name)},\n`;
