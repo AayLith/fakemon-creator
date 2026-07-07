@@ -282,7 +282,7 @@ app.get('/api/load-base-data', async (req, res) => {
         res.json({
             success: true,
             moves: parseShowdownMoves(movesRes),
-            abilities: parseShowdownTS(abilitiesRes),
+            abilities: parseShowdownAbilities(abilitiesRes),
             movesText: parseShowdownTS(movesTextRes),
             abilitiesText: parseShowdownTS(abilitiesTextRes)
         });

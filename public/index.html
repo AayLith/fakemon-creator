@@ -11,7 +11,7 @@
         <h1 class="text-2xl font-bold text-red-500">🐉 hicsuntdracones.win <span class="text-white text-lg font-normal">| Fakemon Studio</span></h1>
         <div class="space-x-2">
             <button onclick="loadFromGitHub(event)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded font-medium transition">⚡ Charger Données GitHub</button>
-            <button onclick="saveAllChanges()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-medium transition">💾 Enregistrer les Fichiers</button>
+            <!--<button onclick="saveAllChanges()" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded font-medium transition">💾 Enregistrer les Fichiers</button>-->
         </div>
     </header>
 
@@ -30,8 +30,8 @@
         <!-- ESPACE DE TRAVAIL PRINCIPAL -->
 		<div class="flex flex-col flex-grow">
 			<div class="flex bg-gray-800 border-b border-gray-700">
-				<button onclick="switchTab('editor')" class="px-6 py-3 border-b-2 border-red-500 text-white font-bold">Édition Pokémon</button>
-				<button onclick="switchTab('export')" class="px-6 py-3 border-b-2 border-transparent hover:border-gray-500 text-gray-400 font-bold">Export Textes</button>
+				<button id="btn-editor" onclick="switchMainTab('editor')" class=" maintab-btn px-6 py-3 border-b-2 border-red-500 text-white font-bold">Édition Pokémon</button>
+				<button id="btn-export" onclick="switchMainTab('export')" class=" maintab-btn px-6 py-3 border-b-2 border-transparent hover:border-gray-500 text-gray-400 font-bold">Export Textes</button>
 			</div>
 
 			<div id="tab-editor" class="p-4 overflow-y-auto">
@@ -83,6 +83,7 @@
 								</div>
 							</div>
 							<div class="flex justify-between items-center mb-2">
+								<div id="totalContainer"></div>
 								<button onclick="randomizeStats()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition">
 									🎲 Random
 								</button>
@@ -116,16 +117,19 @@
 							<!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
 							<div class="border-t border-gray-700 pt-4">
 								<div class="flex border-b border-gray-600 text-sm">
-									<button onclick="switchTab('tabTypes')" class="tab-btn px-4 py-2 bg-gray-700 text-white font-medium rounded-t">Types</button>
-									<button onclick="switchTab('tabAbilities')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Talents</button>
-									<button onclick="switchTab('tabMoves')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Attaques</button>
+									<button id="btn-types" onclick="switchTab('types')" class="tab-btn px-4 py-2 bg-gray-700 hover:bg-gray-700 text-white font-medium rounded-t">Types</button>
+									<button id="btn-abilities" onclick="switchTab('abilities')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Talents</button>
+									<button id="btn-moves" onclick="switchTab('moves')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Attaques</button>
 								</div>
 
 								<!-- CONTENU DES ONGLETS -->
-								<div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-3 gap-2"></div>
-								<div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2"></div>
-								<div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2">
-									<input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
+								<div id="tab-types" class="tab-content p-3 bg-gray-900 rounded-b grid grid-cols-3 gap-2"></div>
+								<div id="tab-abilities" class="tab-content hidden p-3 bg-gray-900 rounded-b max-h-[950px] overflow-y-auto space-y-2">
+									<input type="text" id="searchAbility" oninput="searchInAbilities()" placeholder="Filtrer un talent..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
+									<div id="abilitiesContainer" class="space-y-1"></div>
+								</div>
+								<div id="tab-moves" class="tab-content hidden p-3 bg-gray-900 rounded-b max-h-[950px] overflow-y-auto space-y-2">
+									<input type="text" id="searchMove" oninput="searchInMovesDebounced()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
 									<div id="movesContainer" class="space-y-1"></div>
 								</div>
 							</div>
@@ -140,7 +144,7 @@
 
 			<div id="tab-export" class="hidden p-6 space-y-6">
 				<h2 class="text-xl font-bold text-white">Export des fichiers de données</h2>
-				<div id="editorZone" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				<div id="exportZone" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<div>
 						<label class="text-sm text-gray-400">Pokedex</label>
 						<textarea id="export-pokedex" readonly class="w-full h-32 bg-gray-900 border border-gray-700 p-2 text-xs font-mono text-green-400 rounded"></textarea>
@@ -167,6 +171,8 @@
 
     <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
     <script>
+		const pokemonListItems = new Map();
+	
 		function extractObjectFromTS(tsCode) {
 			// 1. On cherche la première accolade ouvrante et la dernière fermante
 			const start = tsCode.indexOf('{');
@@ -204,7 +210,13 @@
 			return text ? text.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
 		}
 	
-        let db = { pokedex: {}, formatsData: {}, learnsets: {}, moves: {}, abilities: {} };
+		let db = {
+			pokedex: {},
+			formatsData: {},
+			learnsets: {},
+			moves: {},
+			abilities: {}
+		};
         let activeId = null;
         let localImages = {};
 
@@ -264,7 +276,7 @@
 										
 					buildUILists();
 					renderPokemonSidebar();
-					alert("✅ Données, talents et descriptions synchronisés avec succès !");
+					alert("✅ Données, synchronisés avec succès !");
 				} else {
 					alert(`❌ Échec du serveur : ${data.error}`);
 				}
@@ -279,48 +291,46 @@
 			}
 		}
 
-        function renderPokemonSidebar() {
-            const list = document.getElementById('pokemonList');
-            list.innerHTML = "";
-            Object.keys(db.pokedex).forEach(id => {
-                const pk = db.pokedex[id];
-                const li = document.createElement('li');
-                li.className = "p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center transition";
-                li.onclick = () => selectPokemon(id);
-				const totalStats = Object.values(pk.baseStats).reduce((a, b) => a + b, 0);
-                li.innerHTML = `
-					<div>
-						<div class="flex justify-between">
-							<div><strong class="block text-xl text-gray-200">#${pk.num}   ${pk.name}</strong></div>
-							<div class="flex gap-1">
-								${pk.types.map(t => `<span class="p-0.5">${getTypeSprite(t)}</span>`).join('')}
-							</div>
-						</div>
-						<div class="text-xs text-gray-500 font-mono grid grid-cols-7 text-left">
-							<span class="text-red-400">HP:${pk.baseStats.hp}</span>
-							<span class="text-orange-400">Atk:${pk.baseStats.atk}</span>
-							<span class="text-yellow-400">Def:${pk.baseStats.def}</span>
-							<span class="text-green-400">SpA:${pk.baseStats.spa}</span>
-							<span class="text-lime-400">SpD:${pk.baseStats.spd}</span>
-							<span class="text-cyan-400">Spe:${pk.baseStats.spe}</span>
-							<span class="text-pink-500 text-sm text-right">Total:${totalStats}</span>
-						</div>
-					</div>
-                `;
-                list.appendChild(li);
-            });
-        }
+		function renderPokemonSidebar() {
+			const list = document.getElementById('pokemonList');
+			list.innerHTML = "";
+			pokemonListItems.clear();
+
+			const fragment = document.createDocumentFragment(); // 0 reflow intermédiaire
+
+			Object.keys(db.pokedex).forEach(id => {
+				const pk = db.pokedex[id];
+				const li = document.createElement('li');
+				li.className = "p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center transition";
+				li.onclick = () => selectPokemon(id);
+				li.innerHTML = buildPokemonItemHTML(pk);
+
+				fragment.appendChild(li);
+				pokemonListItems.set(id, li); // on garde la référence pour les updates ciblées
+			});
+
+			list.appendChild(fragment); // un seul attach au DOM réel
+		}
+		
+		// Update CIBLÉ : à utiliser à chaque frappe (nom, stats, types...)
+		// Ne touche qu'un seul <li>, pas toute la liste.
+		function updatePokemonSidebarItem(id) {
+			const li = pokemonListItems.get(id);
+			const pk = db.pokedex[id];
+			if (!li || !pk) return;
+			li.innerHTML = buildPokemonItemHTML(pk);
+		}
 
         function buildUILists() {
             // Remplir l'onglet de sélection des Types
-            const tabTypes = document.getElementById('tabTypes');
+            const tabTypes = document.getElementById('tab-types');
             tabTypes.innerHTML = "";
             Object.keys(typeChart).forEach(t => {
-                tabTypes.innerHTML += `<button onclick="addTypeToFakemon('${t}')" class="bg-gray-600 hover:bg-gray-500 p-2 rounded flex flex-col items-center gap-1"> ${getTypeSprite(t)} </button>`;
+                tabTypes.innerHTML += `<button onclick="addTypeToFakemon('${t}')" class="bg-gray-800 hover:bg-gray-700 p-2 rounded flex flex-col items-center gap-1"> ${getTypeSprite(t)} </button>`;
             });
 
             // Remplir l'onglet des Talents
-            const tabAbil = document.getElementById('tabAbilities');
+            const tabAbil = document.getElementById('tab-abilities');
             tabAbil.innerHTML = "";
             Object.keys(db.abilities).sort().forEach(id => {
                 const ab = db.abilities[id];
@@ -353,18 +363,28 @@
 				</div>
 				<div class="text-gray-400 text-sm truncate">${description}</div>`;
 		}
+		
+		function displayAbility(ab, id) {
+			return `
+				<div class="p-2 bg-gray-700 border border-gray-600 rounded text-xs flex flex-col space-y-1 relative">
+					<div class="flex justify-between items-center font-bold text-white">
+						<span class="text-xl">${ab.name}</span>
+					</div>
+					<div class="text-gray-400 italic text-[11px] leading-tight">${ab.shortDesc || ab.desc || 'Pas de description.'}</div>
+				</div>`;
+		}
 
 		function searchInMoves() {
 			const query = document.getElementById('searchMove').value.toLowerCase();
 			const container = document.getElementById('movesContainer');
-			container.innerHTML = "";
 			
 			// On trie les IDs par nom avant de filtrer pour un meilleur rendu
 			const sortedMoveIds = Object.keys(db.moves).sort((a, b) => {
 				return db.moves[a].name.localeCompare(db.moves[b].name);
 			});
-
-			sortedMoveIds.filter(id => {
+			
+			const html = sortedMoveIds
+				.filter(id => {
 				const mv = db.moves[id];
 				if (!mv) return false;
 
@@ -380,13 +400,39 @@
 					   type.includes(query) || 
 					   desc.includes(query) || 
 					   flags.includes(query);
+				})
+				.map(id => {
+					const mv = db.moves[id];
+					return `<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">${displayMove(mv, id)}</div>`;
+				})
+				.join('');
+
+			container.innerHTML = html;
+		}
+		
+		function searchInAbilities() {
+			const searchInput = document.getElementById('searchAbility');
+			if (!searchInput) return; // Si l'input n'est pas dans le DOM, on arrête
+			
+			const query = searchInput.value.toLowerCase();
+			const container = document.getElementById('abilitiesContainer');
+			if (!container) return;
+			
+			container.innerHTML = ""; // Nettoyage
+			
+			// Si la base est vide (pas de mod), on affiche un message ou on reste vide
+			if (!db.abilities || Object.keys(db.abilities).length === 0) return;
+
+			Object.keys(db.abilities).filter(id => {
+				const ab = db.abilities[id];
+				return (ab.name || "").toLowerCase().includes(query);
 			})
-			//.slice(0, 100)
+			.slice(0, 50) // Limite pour la performance
 			.forEach(id => {
-				const mv = db.moves[id];
-				container.innerHTML += `<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">`
-									+ displayMove(mv, id)
-									+ `</div>`;
+				const ab = db.abilities[id];
+				container.innerHTML +=  `<div onclick="addAbilityToFakemon('${id}')"`
+										+ displayAbility(ab, id);
+										+ `</div>`;
 			});
 		}
 
@@ -398,18 +444,6 @@
             const pk = db.pokedex[id];
             document.getElementById('fkName').value = pk.name;
             document.getElementById('fkNum').value = pk.num;
-
-            // Charger les stats
-            const statsContainer = document.getElementById('statsContainer');
-            statsContainer.innerHTML = "";
-            const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
-            statKeys.forEach(k => {
-                statsContainer.innerHTML += `
-                    <div>
-                        <label class="text-xs text-gray-400 uppercase font-bold">${k}</label>
-                        <input type="number" value="${pk.baseStats[k] || 0}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
-                    </div>`;
-            });
 
             // Afficher l'image si elle existe en local
             const c96 = document.getElementById('canvas96').getContext('2d');
@@ -425,56 +459,66 @@
             renderActiveAbilities();
             renderActiveMoves();
             calculateWeaknesses();
+			renderStatsUI();
         }
 
-        function createNewFakemon() {
-            const name = prompt("Nom du Fakemon :", "NouveauFakemon");
-            if(!name) return;
-            const id = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-            
-            db.pokedex[id] = {
-                num: -Math.floor(Math.random() * 10000), // Nombre négatif par défaut pour éviter les conflits
-                name: name,
-                types: ["Normal"],
-                baseStats: { hp: 60, atk: 60, def: 60, spa: 60, spd: 60, spe: 60 },
-                abilities: { 0: "Blaze" }
-            };
-
-            db.formatsData[id] = { tier: "HSD", isNonstandard: null };
-            db.learnsets[id] = { learnset: { tackle: ["9M"] } };
-
-            renderPokemonSidebar();
-            selectPokemon(id);
-        }
+		function createNewFakemon() {
+			const name = prompt("Nom du Fakemon :");
+			if (!name) return;
+			
+			// 1. Récupérer tous les numéros existants
+			const existingNums = Object.values(db.pokedex).map(pk => parseInt(pk.num) || 0);
+			
+			// 2. Trouver le premier numéro disponible après 0
+			let nextNum = 1;
+			while (existingNums.includes(nextNum)) {
+				nextNum++;
+			}
+			
+			const id = toID(name);
+			
+			// 3. Créer le Fakemon avec le numéro calculé
+			db.pokedex[id] = {
+				num: nextNum, 
+				name: name,
+				types: ["Normal"],
+				baseStats: { hp: 90, atk: 90, def: 90, spa: 90, spd: 90, spe: 90 },
+				abilities: { 0: "" }
+			};
+			
+			db.learnsets[id] = { learnset: {} };
+			
+			renderPokemonSidebar();
+			selectPokemon(id);
+			renderStatsUI();
+		}
 
         function renderActiveTypes() {
             const div = document.getElementById('selectedTypes');
             div.innerHTML = "";
             db.pokedex[activeId].types.forEach((t, i) => {
-				div.innerHTML += `
-					<span class="bg-gray-700 px-2 py-1 rounded flex items-center gap-2 border border-gray-600">
-						${getTypeSprite(t)}
-						<button onclick="removeType(${i})" class="text-red-400 hover:text-white font-black">×</button>
-					</span>`;
+				div.innerHTML += `<button onclick="removeType('${i}')" class="bg-gray-800 hover:bg-gray-700 p-2 rounded flex flex-col items-center gap-1"> ${getTypeSprite(t)} </button>`;
 			});
             calculateWeaknesses();
         }
 
-        function addTypeToFakemon(type) {
-            let current = db.pokedex[activeId].types;
-            if(current.length < 2 && !current.includes(type)) {
-                current.push(type);
-                renderActiveTypes();
-            }
-        }
+		function addTypeToFakemon(type) {
+			let current = db.pokedex[activeId].types;
+			if (current.length < 2 && !current.includes(type)) {
+				current.push(type);
+				renderActiveTypes();
+			}
+			updatePokemonSidebarItem(activeId);   // au lieu de renderPokemonSidebar()
+		}
 
-        function removeType(index) {
-            let current = db.pokedex[activeId].types;
-            if(current.length > 1) {
-                current.splice(index, 1);
-                renderActiveTypes();
-            }
-        }
+		function removeType(index) {
+			let current = db.pokedex[activeId].types;
+			if (current.length > 1) {
+				current.splice(index, 1);
+				renderActiveTypes();
+			}
+			updatePokemonSidebarItem(activeId);   // au lieu de renderPokemonSidebar()
+		}
 
 		function renderActiveAbilities() {
 			const div = document.getElementById('selectedAbilities');
@@ -485,17 +529,12 @@
 			Object.entries(pk.abilities).forEach(([slot, abilityName]) => {
 				const id = toID(abilityName);
 				// On récupère la description fusionnée depuis Smogon
-				const abData = db.abilities[id] || { name: abilityName, shortDesc: "Talent personnalisé ou description manquante." };
+				const ab = db.abilities[id] || { name: abilityName, shortDesc: "Talent personnalisé ou description manquante." };
 				const isHidden = slot === 'H' ? '<span class="text-[10px] bg-purple-950 text-purple-300 px-1 rounded border border-purple-700 font-semibold ml-1">Caché</span>' : '';
 
-				div.innerHTML += `
-					<div class="p-2 bg-gray-700 border border-gray-600 rounded text-xs flex flex-col space-y-1 relative">
-						<div class="flex justify-between items-center font-bold text-white">
-							<span class="text-xl">${slot}: ${abData.name}</span>
-							<button onclick="removeAbility('${slot}')" class="text-red-400 hover:text-red-200 font-black text-sm px-1">×</button>
-						</div>
-						<div class="text-gray-400 italic text-[11px] leading-tight">${abData.shortDesc || abData.desc || 'Pas de description.'}</div>
-					</div>`;
+				div.innerHTML +=  `<div onclick="removeAbility('${slot}')"`
+										+ displayAbility(ab, id);
+										+ `</div>`;
 			});
 		}
 
@@ -549,14 +588,11 @@
             renderActiveMoves();
         }
 
-        function updateStat(statKey, val) {
-            db.pokedex[activeId].baseStats[statKey] = parseInt(val) || 0;
-        }
-
-        function updateFakemonIdentity() {
-            db.pokedex[activeId].name = document.getElementById('fkName').value;
-            db.pokedex[activeId].num = parseInt(document.getElementById('fkNum').value) || 0;
-        }
+		function updateFakemonIdentity() {
+			db.pokedex[activeId].name = document.getElementById('fkName').value;
+			db.pokedex[activeId].num = parseInt(document.getElementById('fkNum').value) || 0;
+			updatePokemonSidebarItem(activeId);   // au lieu de renderPokemonSidebar()
+		}
 
         function handleImageUpload(event) {
             const file = event.target.files[0];
@@ -619,13 +655,53 @@
 			});
 		}
 
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('bg-gray-700', 'text-white'));
-            
-            document.getElementById(tabId).classList.remove('hidden');
-            event.target.classList.add('bg-gray-700', 'text-white');
+        function switchMainTab(tabId) {
+			// 1. Gérer le contenu
+			document.getElementById('tab-editor').classList.toggle('hidden', tabId !== 'editor');
+			document.getElementById('tab-export').classList.toggle('hidden', tabId !== 'export');
+			
+			// 2. Mise à jour visuelle des boutons
+			const buttons = document.querySelectorAll('.maintab-btn');
+			buttons.forEach(btn => {
+				// Retire le style actif de tous les boutons
+				btn.classList.remove('border-red-500', 'text-white');
+				btn.classList.add('border-transparent', 'text-gray-400');
+			});
+
+			// Applique le style actif au bouton cliqué
+			const activeBtn = document.getElementById('btn-' + tabId);
+			activeBtn.classList.add('border-red-500', 'text-white');
+			activeBtn.classList.remove('border-transparent', 'text-gray-400');
+			
+			// 3. Génération des textes si nécessaire
+			if (tabId === 'export') {
+				generateExportTexts();
+			}
         }
+		
+		// Switch d'onglet
+		function switchTab(tabName) {
+			// 1. Masquer tous les contenus d'onglets
+			document.getElementById('tab-types').classList.add('hidden');
+			document.getElementById('tab-moves').classList.add('hidden');
+			document.getElementById('tab-abilities').classList.add('hidden');
+		
+			// 2. Mise à jour visuelle des boutons
+			const buttons = document.querySelectorAll('.tab-btn');
+			buttons.forEach(btn => {
+				// Retire le style actif de tous les boutons
+				btn.classList.remove('bg-gray-700', 'text-white');
+				btn.classList.add('bg-transparent', 'text-gray-400');
+			});
+			
+			// 3. Applique le style actif au bouton cliqué
+			const activeBtn = document.getElementById('btn-' + tabName);
+			activeBtn.classList.add('bg-gray-700', 'text-white');
+			activeBtn.classList.remove('bg-transparent');
+			
+			// 4. Afficher l'onglet
+			document.getElementById('tab-' + tabName).classList.remove('hidden');
+		}
 
         async function saveAllChanges() {
             const res = await fetch('/api/save-fakemons', {
@@ -658,27 +734,12 @@
 			const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
 
 			statKeys.forEach(k => {
-				// Génère un nombre entre -10 et 10
-				const variation = Math.floor(Math.random() * 21) - 10;
-				let newValue = stats[k] + variation;
+					const variation = Math.floor(Math.random() * 21) - 10;
+					stats[k] = Math.max(1, Math.min(255, stats[k] + variation));
+				});
 
-				// On borne les valeurs entre 1 et 255 (standards Pokémon)
-				newValue = Math.max(1, Math.min(255, newValue));
-				
-				stats[k] = newValue;
-			});
-
-			// Rafraîchir l'affichage
-			// On rappelle selectPokemon ou simplement la partie stats
-			const statsContainer = document.getElementById('statsContainer');
-			statsContainer.innerHTML = "";
-			statKeys.forEach(k => {
-				statsContainer.innerHTML += `
-					<div>
-						<label class="text-xs text-gray-400 uppercase font-bold">${k}</label>
-						<input type="number" value="${stats[k]}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
-					</div>`;
-			});
+			// Rafraîchir les inputs et le total
+			renderStatsUI();
 		}
 		
 		window.onload = async () => {
@@ -687,42 +748,44 @@
 				const data = await res.json();
 				
 				if (data.success) {
-					db.moves = JSON.parse(data.moves);
-					db.abilities = JSON.parse(data.abilities);
-					
-					const movesText = new Function(`return ${data.movesText}`)();
-					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
-					
-					// Fusion des textes
-					Object.keys(movesText).forEach(id => {
-						if (db.moves[id]) {
-							db.moves[id].desc = movesText[id].desc || "";
-							db.moves[id].shortDesc = movesText[id].shortDesc || "";
+					setTimeout(() => {
+						db.moves = JSON.parse(data.moves);
+						db.abilities = JSON.parse(data.abilities);
+						
+						const movesText = new Function(`return ${data.movesText}`)();
+						const abilitiesText = new Function(`return ${data.abilitiesText}`)();
+						
+						// Fusion des textes
+						Object.keys(movesText).forEach(id => {
+							if (db.moves[id]) {
+								db.moves[id].desc = movesText[id].desc || "";
+								db.moves[id].shortDesc = movesText[id].shortDesc || "";
+							}
+						});
+						Object.keys(abilitiesText).forEach(id => {
+							if (db.abilities[id]) {
+								db.abilities[id].desc = abilitiesText[id].desc || "";
+								db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
+							}
+						});
+						console.log("✅ Données de base Smogon chargées.");
+						
+						// CRUCIAL : Déclenchez le remplissage des listes ici !
+						if (typeof searchInMoves === 'function') {
+							searchInMoves(); // Remplit la liste des capacités
 						}
-					});
-					Object.keys(abilitiesText).forEach(id => {
-						if (db.abilities[id]) {
-							db.abilities[id].desc = abilitiesText[id].desc || "";
-							db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
+						if (typeof renderAbilitiesList === 'function') {
+							renderAbilitiesList(); // Remplit la liste des talents (créez cette fonction si elle manque)
 						}
-					});
-					console.log("✅ Données de base Smogon chargées.");
+					}, 100);
 				}
 			} catch (e) {
 				console.error("Erreur chargement initial :", e);
 			}
-		};
-		
-		// Switch d'onglet
-		function switchTab(tabName) {
-			document.getElementById('tab-editor').classList.toggle('hidden', tabName !== 'editor');
-			document.getElementById('tab-export').classList.toggle('hidden', tabName !== 'export');
 			
-			// Si on passe sur l'export, on génère les textes à la volée
-			if (tabName === 'export') {
-				generateExportTexts();
-			}
-		}
+			buildUILists(); 
+			renderPokemonSidebar();
+		};
 
 		// Génération des textes
 		function generateExportTexts() {
@@ -735,9 +798,74 @@
 		function copyToClipboard(elementId) {
 			const copyText = document.getElementById(elementId);
 			copyText.select();
-			document.execCommand("copy");
+			navigator.clipboard.writeText();
 			alert("Copié dans le presse-papier !");
 		}
+		
+		function renderStatsUI() {
+            const pk = db.pokedex[activeId];
+			const stats = db.pokedex[activeId].baseStats;
+			const total = Object.values(stats).reduce((a, b) => a + b, 0);
+			const totalContainer = document.getElementById('totalContainer');
+			totalContainer.innerHTML = `<span>Total: ${total}</span>`;
+			
+			const statsContainer = document.getElementById('statsContainer');
+			statsContainer.innerHTML ="";
+            const statKeys = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'];
+            statKeys.forEach(k => {
+                statsContainer.innerHTML += `
+                    <div>
+                        <label class="text-xs text-gray-400 uppercase font-bold">${k}</label>
+                        <input type="number" value="${pk.baseStats[k] || 0}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
+                    </div>`;
+            });
+		}
+
+		function updateStat(statKey, val) {
+			if (!activeId) return;
+			db.pokedex[activeId].baseStats[statKey] = parseInt(val) || 0;
+			const stats = db.pokedex[activeId].baseStats;
+			document.getElementById('totalContainer').innerHTML =
+				`<span>Total: ${Object.values(stats).reduce((a, b) => a + b, 0)}</span>`;
+			updatePokemonSidebarItem(activeId);   // au lieu de renderPokemonSidebar()
+			// note: renderStatsUI() n'est plus appelé ici -> le focus du champ n'est plus perdu
+		}
+		
+		function debounce(fn, delay = 150) {
+			let t;
+			return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); };
+		}
+		const searchInMovesDebounced = debounce(searchInMoves);
+		
+		// Construit le HTML interne d'un <li> (factorisé pour être réutilisé)
+		function buildPokemonItemHTML(pk) {
+		const totalStats = Object.values(pk.baseStats).reduce((a, b) => a + b, 0);
+		return `
+			<div>
+				<div class="flex justify-between">
+					<div><strong class="block text-xl text-gray-200">#${pk.num}   ${pk.name}</strong></div>
+					<div class="flex gap-1">
+						${pk.types.map(t => `<span class="p-0.5">${getTypeSprite(t)}</span>`).join('')}
+					</div>
+				</div>
+				<div class="text-xs text-gray-500 font-mono grid grid-cols-7 text-left">
+					<span class="text-red-400">HP:${pk.baseStats.hp}</span>
+					<span class="text-orange-400">Atk:${pk.baseStats.atk}</span>
+					<span class="text-yellow-400">Def:${pk.baseStats.def}</span>
+					<span class="text-green-400">SpA:${pk.baseStats.spa}</span>
+					<span class="text-lime-400">SpD:${pk.baseStats.spd}</span>
+					<span class="text-cyan-400">Spe:${pk.baseStats.spe}</span>
+					<span class="text-pink-500 text-sm text-right">Total:${totalStats}</span>
+				</div>
+			</div>
+		`;
+	}
+		
+		
+		
+		
+		
+		
     </script>
 </body>
 </html>});
