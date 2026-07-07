@@ -176,61 +176,7 @@
     <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
     <script>
 		const pokemonListItems = new Map();
-
-		// Certaines données du serveur contiennent de vrais retours à la ligne
-		// À L'INTÉRIEUR de chaînes de caractères (au lieu d'un \n échappé), ce qui
-		// fait planter new Function()/eval avec "unescaped line break in string literal".
-		// Cette fonction échappe uniquement les retours à la ligne bruts trouvés
-		// à l'intérieur d'une chaîne (entre guillemets simples, doubles ou backticks).
-		function sanitizeJsStringLiterals(text) {
-			let result = '';
-			let inString = false;
-			let quoteChar = '';
-			let escaped = false;
-			for (let i = 0; i < text.length; i++) {
-				const ch = text[i];
-				if (inString) {
-					if (escaped) {
-						result += ch;
-						escaped = false;
-						continue;
-					}
-					if (ch === '\\') {
-						result += ch;
-						escaped = true;
-						continue;
-					}
-					if (ch === quoteChar) {
-						inString = false;
-						result += ch;
-						continue;
-					}
-					if (ch === '\n') { result += '\\n'; continue; }
-					if (ch === '\r') { result += '\\r'; continue; }
-					result += ch;
-				} else {
-					if (ch === '"' || ch === "'" || ch === '`') {
-						inString = true;
-						quoteChar = ch;
-					}
-					result += ch;
-				}
-			}
-			return result;
-		}
-
-		// Parse un texte représentant un objet/array JS littéral, en l'assainissant
-		// au préalable. Retourne un objet vide (et logue l'erreur) en cas d'échec,
-		// pour ne jamais faire planter le reste du chargement.
-		function safeParseJsObject(text, label = "données") {
-			try {
-				return new Function(`return ${sanitizeJsStringLiterals(text)}`)();
-			} catch (e) {
-				console.error(`Erreur de parsing (${label}) :`, e);
-				return {};
-			}
-		}
-
+	
 		function extractObjectFromTS(tsCode) {
 			// 1. On cherche la première accolade ouvrante et la dernière fermante
 			const start = tsCode.indexOf('{');
@@ -325,9 +271,9 @@
 				const data = await res.json();
 				
 				if(data.success) {
-					db.pokedex = safeParseJsObject(data.pokedex, "pokedex");
-					db.formatsData = safeParseJsObject(data.formatsData, "formatsData");
-					db.learnsets = safeParseJsObject(data.learnsets, "learnsets");
+					db.pokedex = new Function(`return ${data.pokedex}`)();
+					db.formatsData = new Function(`return ${data.formatsData}`)();
+					db.learnsets = new Function(`return ${data.learnsets}`)();
 					// db.abilities = new Function(`return ${data.abilities}`)();
 					// db.moves = JSON.parse(data.moves); // Plus de new Function, plus d'erreur de syntaxe !
 					// db.abilities = JSON.parse(data.abilities); // Plus de new Function, plus d'erreur de syntaxe !
@@ -482,31 +428,25 @@
 			const container = document.getElementById('abilitiesContainer');
 			if (!container) return;
 			
-			container.innerHTML = "";
-
 			// Si la base est vide (pas de mod), on affiche un message ou on reste vide
-			if (!db.abilities || Object.keys(db.abilities).length === 0) return;
+			if (!db.abilities || Object.keys(db.abilities).length === 0) {
+				container.innerHTML = "";
+				return;
+			}
 
-			const fragment = document.createDocumentFragment();
-
-			Object.keys(db.abilities)
+			const html = Object.keys(db.abilities)
 				.filter(id => {
 					const ab = db.abilities[id];
 					return (ab.name || "").toLowerCase().includes(query);
 				})
 				.slice(0, 50) // Limite pour la performance
-				.forEach(id => {
+				.map(id => {
 					const ab = db.abilities[id];
-					const item = document.createElement('div');
-					item.className = "p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition";
-					item.innerHTML = displayAbility(ab, id);
-					// addEventListener avec closure : l'id n'est jamais sérialisé dans
-					// une chaîne HTML, donc aucun risque de caractère spécial cassant le parsing
-					item.addEventListener('click', () => addAbilityToFakemon(id));
-					fragment.appendChild(item);
-				});
+					return `<div onclick="addAbilityToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">${displayAbility(ab, id)}</div>`;
+				})
+				.join('');
 
-			container.appendChild(fragment); // une seule écriture DOM
+			container.innerHTML = html; // une seule écriture DOM
 		}
 
         function selectPokemon(id) {
@@ -548,13 +488,11 @@
 				num: nextNum, 
 				name: name,
 				types: ["Normal"],
-				heightm: 1.0, // Taille en mètres
-				weightkg: 10.0, // Poids en kg
 				baseStats: { hp: 90, atk: 90, def: 90, spa: 90, spd: 90, spe: 90 },
-				abilities: {  }
+				abilities: { 0: "" }
 			};
 			
-			db.learnsets[id] = { learnset: {rest: ["9L1"],protect: ["9L1"],substitute: ["9L1"],sleeptalk: ["9L1"]} };
+			db.learnsets[id] = { learnset: {} };
 			
 			renderPokemonSidebar();
 			selectPokemon(id);
@@ -594,21 +532,16 @@
 			const pk = db.pokedex[activeId];
 			if (!pk || !pk.abilities) return;
 
-			const fragment = document.createDocumentFragment();
-
 			Object.entries(pk.abilities).forEach(([slot, abilityName]) => {
 				const id = toID(abilityName);
 				// On récupère la description fusionnée depuis Smogon
 				const ab = db.abilities[id] || { name: abilityName, shortDesc: "Talent personnalisé ou description manquante." };
+				const isHidden = slot === 'H' ? '<span class="text-[10px] bg-purple-950 text-purple-300 px-1 rounded border border-purple-700 font-semibold ml-1">Caché</span>' : '';
 
-				const item = document.createElement('div');
-				item.className = "cursor-pointer";
-				item.innerHTML = displayAbility(ab, id);
-				item.addEventListener('click', () => removeAbility(slot));
-				fragment.appendChild(item);
+				div.innerHTML += `<div onclick="removeAbility('${slot}')">`
+										+ displayAbility(ab, id)
+										+ `</div>`;
 			});
-
-			div.appendChild(fragment);
 		}
 
         function addAbilityToFakemon(abilityId) {
@@ -874,31 +807,22 @@
 						db.moves = JSON.parse(data.moves);
 						db.abilities = JSON.parse(data.abilities);
 						
-						const movesText = safeParseJsObject(data.movesText, "descriptions des attaques");
-						const abilitiesText = safeParseJsObject(data.abilitiesText, "descriptions des talents");
+						const movesText = new Function(`return ${data.movesText}`)();
+						const abilitiesText = new Function(`return ${data.abilitiesText}`)();
 						
-						// Fusion des textes (chaque bloc est isolé : un souci sur l'un
-						// n'empêche pas la fusion de l'autre)
-						try {
-							Object.keys(movesText).forEach(id => {
-								if (db.moves[id]) {
-									db.moves[id].desc = movesText[id].desc || "";
-									db.moves[id].shortDesc = movesText[id].shortDesc || "";
-								}
-							});
-						} catch (e) {
-							console.error("Erreur fusion descriptions attaques :", e);
-						}
-						try {
-							Object.keys(abilitiesText).forEach(id => {
-								if (db.abilities[id]) {
-									db.abilities[id].desc = abilitiesText[id].desc || "";
-									db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
-								}
-							});
-						} catch (e) {
-							console.error("Erreur fusion descriptions talents :", e);
-						}
+						// Fusion des textes
+						Object.keys(movesText).forEach(id => {
+							if (db.moves[id]) {
+								db.moves[id].desc = movesText[id].desc || "";
+								db.moves[id].shortDesc = movesText[id].shortDesc || "";
+							}
+						});
+						Object.keys(abilitiesText).forEach(id => {
+							if (db.abilities[id]) {
+								db.abilities[id].desc = abilitiesText[id].desc || "";
+								db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
+							}
+						});
 						console.log("✅ Données de base Smogon chargées.");
 						
 						// CRUCIAL : Déclenchez le remplissage des listes ici !
@@ -950,17 +874,6 @@
                         <input type="number" value="${pk.baseStats[k] || 0}" oninput="updateStat('${k}', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
                     </div>`;
             });
-			statsContainer.innerHTML += `
-			<div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-600">
-				<div>
-					<label class="text-xs text-gray-400 uppercase font-bold">Taille (m)</label>
-					<input type="number" step="0.1" value="${pk.heightm || 1}" oninput="updateProp('heightm', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
-				</div>
-				<div>
-					<label class="text-xs text-gray-400 uppercase font-bold">Poids (kg)</label>
-					<input type="number" step="0.1" value="${pk.weightkg || 10}" oninput="updateProp('weightkg', this.value)" class="w-full bg-gray-700 text-center border border-gray-600 p-1 rounded text-sm mt-0.5">
-				</div>
-			</div>`;
 		}
 
 		function updateStat(statKey, val) {
