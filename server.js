@@ -40,6 +40,79 @@ function parseShowdownTS(tsContent) {
     }
 }
 
+function toID(text) {
+    return text ? text.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+}
+
+function parseShowdownMoves(tsContent) {
+    const cleanedMoves = {};
+    const moveBlocks = tsContent.split(/num:\s*/);
+    
+    for (let i = 1; i < moveBlocks.length; i++) {
+        const s = moveBlocks[i];
+        if (s.includes("isNonstandard") || s.includes("isMax:true")) continue;
+
+        // 1. Extraction du nom original pour générer l'ID
+        const nameMatch = s.match(/name:\s*['"]([^'"]+)['"]/);
+        const rawName = nameMatch ? nameMatch[1] : null;
+        
+        // 2. Conversion à la manière de Showdown
+        const id = toID(rawName); 
+        if (!id) continue;
+
+        // Extraction des autres propriétés
+        const extract = (key) => {
+            const start = s.indexOf(key + ":");
+            if (start === -1) return null;
+            const pfrom = start + key.length + 1;
+            let pto = s.indexOf(',', pfrom);
+            if (pto === -1 || pto - pfrom > 50) pto = s.indexOf('\n', pfrom);
+            return s.substring(pfrom, pto).trim().replace(/['"]/g, '');
+        };
+
+        cleanedMoves[id] = {
+            name: rawName, // On garde le nom original pour l'affichage
+            type: extract('type') || "Normal",
+            category: extract('category') || "Status",
+            basePower: parseInt(extract('basePower')) || 0,
+            accuracy: extract('accuracy') === 'true' ? true : (parseInt(extract('accuracy')) || 0)
+        };
+    }
+    
+    return JSON.stringify(cleanedMoves);
+}
+
+function parseShowdownAbilities(tsContent) {
+    // 1. Isoler la chaîne entre le premier { et le dernier }
+    const start = tsContent.indexOf('{');
+    const end = tsContent.lastIndexOf('}');
+    const content = tsContent.substring(start + 1, end);
+
+    // 2. Découpage intelligent : on cherche chaque début d'attaque "id": {
+    // On split par "}," pour obtenir chaque bloc individuellement
+    const blocks = content.split(/\},\s*"/);
+    const cleanedAbilities = {};
+
+    blocks.forEach((block, index) => {
+        // On nettoie le nom de l'id
+        const idMatch = block.match(/"?([^"]+)"?:\s*{/);
+        if (!idMatch) return;
+        
+        const id = idMatch[1];
+        
+        // On extrait juste ce qui nous intéresse dans ce bloc
+        // On cherche 'type:' suivi du type
+        const flMatch = block.match(/flags:\s*(\d+)/);
+        
+        cleanedAbilities[id] = {
+            name: id,
+			flags: flMatch ? flMatch[1] : "Error"
+        };
+    });
+
+    return JSON.stringify(cleanedAbilities);
+}
+
 // API : Charger les données globales depuis le dépôt officiel GitHub de Showdown (Gen 9)
 app.get('/api/load-showdown', async (req, res) => {
     try {
@@ -127,22 +200,104 @@ app.post('/api/load-mod', async (req, res) => {
             fetchFileWithFallback(`${baseUrl}/pokedex.ts`, 'export const Pokedex = {};'),
             fetchFileWithFallback(`${baseUrl}/formats-data.ts`, 'export const FormatsData = {};'),
             fetchFileWithFallback(`${baseUrl}/learnsets.ts`, 'export const Learnsets = {};'),
-            fetch(`${smogonBaseUrl}/moves.ts`, 'export const moves = {};'),
-            fetch(`${smogonBaseUrl}/abilities.ts`, 'export const abilities = {};'),
+			fetchFileWithFallback(`${smogonBaseUrl}/moves.ts`, 'export const Moves = {};'),
+			fetchFileWithFallback(`${smogonBaseUrl}/abilities.ts`, 'export const Abilities = {};'),
             fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),       // 🌟 Nouveau : Textes des attaques
             fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())   // 🌟 Nouveau : Textes des talents
         ]);
+		// console.log(parseShowdownTS(movesRes).substring(0, 1000))
+
+		const movesRaw = parseShowdownTS(movesRes); // Ton texte brut
+		const abilitiesRaw = parseShowdownTS(abilitiesRes); // Ton texte brut
+
+		// On transforme le texte brut en un objet "allégé" (Lightweight)
+		// On ne garde que les infos nécessaires à l'UI
+		try {
+			/*const fullMoves = {};
+			const fullAbilities = {};
+			
+			// On utilise une Regex pour isoler chaque bloc d'attaque 
+			// Format typique dans moves.ts : "id": { ... },
+			// On cible le nom de l'attaque et on extrait les infos principales
+			const regex = /"([^"]+)":\s*{([^}]+)}/g;
+			let match;
+			
+			while ((match = regex.exec(movesRaw)) !== null) {
+				const id = match[1];
+				const content = match[2];
+
+				// On crée un objet simple à partir des propriétés de base
+				const move = {};
+				
+				// Extraction manuelle des champs clés via recherche simple
+				if (content.includes('accuracy:')) {
+					const acMatch = content.match(/accuracy:\s*(\d+)/);
+					move.accuracy = acMatch ? parseInt(acMatch[1]) : 0;
+				}
+				if (content.includes('basePower:')) {
+					const bpMatch = content.match(/basePower:\s*(\d+)/);
+					move.basePower = bpMatch ? parseInt(bpMatch[1]) : 0;
+				}
+				if (content.includes('category:')) {
+					const catMatch = content.match(/category:\s*['"]([^'"]+)['"]/);
+					move.category = catMatch ? catMatch[1] : "Error";
+				}
+				if (content.includes('type:')) {
+					const typeMatch = content.match(/type:\s*['"]([^'"]+)['"]/);
+					move.type = typeMatch ? typeMatch[1] : "Error";
+				}
+				if (content.includes('flags:')) {
+					const flMatch = content.match(/flags:\s*(\d+)/);
+					move.flags = flMatch ? flMatch[1] : "";
+				}
+				move.name = id; // On utilisera le text/moves.ts pour le vrai nom
+				
+				fullMoves[id] = move;
+			}
+			
+			while ((match = regex.exec(abilitiesRaw)) !== null) {
+				const id = match[1];
+				const content = match[2];
+
+				// On crée un objet simple à partir des propriétés de base
+				const ability = {};
+				
+				ability.name = id; // On utilisera le text/moves.ts pour le vrai nom
+				
+				fullAbilities[id] = ability;
+			}*/
+			
+			// Maintenant fullMoves est un objet JSON pur
+			res.json({
+				success: true,
+				// moves: JSON.stringify(fullMoves),
+				moves: parseShowdownMoves(movesRes),
+				pokedex: parseShowdownTS(pokedexRes),
+				formatsData: parseShowdownTS(formatsRes),
+				learnsets: parseShowdownTS(learnsetsRes),
+				// abilities: JSON.stringify(fullAbilities),
+				abilities: JSON.stringify(abilitiesRes),
+				movesText: parseShowdownTS(movesTextRes),         // 🌟 Transmis au client
+				abilitiesText: parseShowdownTS(abilitiesTextRes)   // 🌟 Transmis au client
+				// ... reste des champs
+			});
+		} catch (e) {
+			console.error("Erreur de parsing:", e);
+		}
+		/*
+		//console.log(movesRaw.substring(0, 100));
+		console.log(cleanedMoves.substring(0, 100));
 
         res.json({
             success: true,
             pokedex: parseShowdownTS(pokedexRes),
             formatsData: parseShowdownTS(formatsRes),
             learnsets: parseShowdownTS(learnsetsRes),
-            moves: parseShowdownTS(movesRes),
-            abilities: parseShowdownTS(abilitiesRes),
+			moves: JSON.stringify(fullMoves),
+			abilities: JSON.stringify(cleanedabilities), // Maintenant c'est du JSON pur et léger
             movesText: parseShowdownTS(movesTextRes),         // 🌟 Transmis au client
             abilitiesText: parseShowdownTS(abilitiesTextRes)   // 🌟 Transmis au client
-        });
+        });*/
     } catch (error) {
         res.status(500).send(`Erreur interne du serveur : ${error.message}`);
     }

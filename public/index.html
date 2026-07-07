@@ -133,6 +133,24 @@
 
     <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
     <script>
+		function extractObjectFromTS(tsCode) {
+			// 1. On cherche la première accolade ouvrante et la dernière fermante
+			const start = tsCode.indexOf('{');
+			const end = tsCode.lastIndexOf('}');
+			if (start === -1 || end === -1) return {};
+
+			// 2. On isole le contenu (le JSON brut)
+			const jsonString = tsCode.substring(start, end + 1);
+			
+			// 3. On utilise l'évaluateur pour transformer la chaîne en objet
+			try {
+				return new Function(`return ${jsonString}`)();
+			} catch (e) {
+				console.error("Erreur d'extraction :", e);
+				return {};
+			}
+		}
+	
 		// Fonction utilitaire pour créer le sprite
 		function getTypeSprite(typeName) {
 		// Utilisation d'une classe CSS pour le contrôle de taille
@@ -202,7 +220,9 @@
 					db.formatsData = new Function(`return ${data.formatsData}`)();
 					db.learnsets = new Function(`return ${data.learnsets}`)();
 					db.moves = new Function(`return ${data.moves}`)();
-					db.abilities = new Function(`return ${data.abilities}`)();
+					// db.abilities = new Function(`return ${data.abilities}`)();
+					// db.moves = JSON.parse(data.moves); // Plus de new Function, plus d'erreur de syntaxe !
+					// db.abilities = JSON.parse(data.abilities); // Plus de new Function, plus d'erreur de syntaxe !
 					
 					const movesText = new Function(`return ${data.movesText}`)();
 					const abilitiesText = new Function(`return ${data.abilitiesText}`)();

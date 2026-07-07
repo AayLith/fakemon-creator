@@ -1,0 +1,99 @@
+public static List<Move> parseMoves ( string file )
+    {
+        string[] separators = new string[ 1 ];
+        separators[ 0 ] = "num:";
+        string[] move = file.Split ( separators , System.StringSplitOptions.None );
+        List<string> movesString = new List<string> ();
+        for ( int i = 1 ; i < move.Length ; i++ )
+            movesString.Add ( move[ i ] );
+        List<Move> moves = new List<Move> ();
+
+        Move m;
+        int pfrom;
+        int pto;
+        string r;
+        foreach ( string s in movesString )
+        {
+            m = ScriptableObject.CreateInstance<Move> ();
+            if ( s.Contains ( "isNonstandard" ) || s.Contains ( "isMax:true" ) )//|| s.Contains ( "Gigantamax" ) || s.Contains ( "LGPE" ) )
+                continue;
+
+            m.fulldescription = s;
+
+            // Get acuracy
+            //Debug.Log ( "Getting Accuracy" );
+            pfrom = s.IndexOf ( "accuracy:" ) + "accuracy:".Length;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom );
+            //Debug.Log ( r );
+            if ( r == "true" )
+                m.precision = 100;
+            else
+                m.precision = int.Parse ( r );
+
+            // Get power
+            //Debug.Log ( "Getting Power" );
+            pfrom = s.IndexOf ( "basePower:" , pfrom ) + "basePower:".Length;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom );
+            // Debug.Log ( r );
+            if ( r == "true" )
+                m.damage = 100;
+            else
+                m.damage = int.Parse ( r );
+
+            // Get category
+            //Debug.Log ( "Getting Category" );
+            pfrom = s.IndexOf ( "category:" , pfrom ) + "category:".Length + 1;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom - 1 );
+            //Debug.Log ( r );
+            m.category = PokemonMakerController.instance.categories[ r ];
+
+            // Get fullName
+            //Debug.Log ( "Getting Name" );
+            pfrom = s.IndexOf ( "name:" , pfrom ) + "name:".Length + 1;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom - 1 );
+            //Debug.Log ( r );
+            m.fullName = r;
+
+            // Get PP
+            // Debug.Log ( "Getting PP" );
+            pfrom = s.IndexOf ( "pp:" , pfrom ) + "pp:".Length;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom );
+            //Debug.Log ( r );
+            m.pp = int.Parse ( r );
+
+            // Get flags
+            // Debug.Log ( "Getting flags" );
+            pfrom = s.IndexOf ( "flags:{" , pfrom ) + "flags:{".Length;
+            pto = s.IndexOf ( '}' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom );
+            //Debug.Log ( r );
+            m.flags = r;
+
+            // Get type
+            //Debug.Log ( "Getting Type" );
+            pfrom = s.IndexOf ( "type:" , pfrom ) + "type:".Length + 1;
+            pto = s.IndexOf ( ',' , pfrom );
+            r = s.Substring ( pfrom , pto - pfrom - 1 );
+            //Debug.Log ( r );
+            m.type = PokemonMakerController.instance.types[ r ];
+
+            // Get description
+            //Debug.Log ( "Getting Description" );
+            Debug.Log ( s.Contains ( "shortDesc:" ) + " / " + s );
+            pfrom = s.IndexOf ( "shortDesc:" , pfrom ) + "shortdesc:".Length + 1;
+            pto = s.IndexOf ( '\"' , pfrom );
+            Debug.Log ( pfrom + " / " + pto );
+            r = s.Substring ( pfrom , pto - pfrom );
+            //Debug.Log ( r );
+            m.description = r;
+
+            Debug.Log ( m.ToString () );
+            moves.Add ( m );
+        }
+        return ( moves );
+    }
