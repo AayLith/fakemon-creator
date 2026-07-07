@@ -137,7 +137,7 @@ app.post('/api/save-fakemons', (req, res) => {
         const { pokedex, formatsData, learnsets, images } = req.body;
 
         // 1. Sauvegarde des fichiers de données au format TypeScript pour Showdown / DH2
-        fs.writeFileSync(path.join(EXPORT_DIR, 'pokedex.ts'), `export const Pokedex: ModdedSpeciesDataTable = ${JSON.stringify(pokedex, null, '\t')};`);
+        fs.writeFileSync(path.join(EXPORT_DIR, 'pokedex.ts'), `export const Pokedex: ModdedSpeciesData	 le = ${JSON.stringify(pokedex, null, '\t')};`);
         fs.writeFileSync(path.join(EXPORT_DIR, 'formats-data.ts'), `export const FormatsData: ModdedFormatsDataTable = ${JSON.stringify(formatsData, null, '\t')};`);
         fs.writeFileSync(path.join(EXPORT_DIR, 'learnsets.ts'), `export const Learnsets: ModdedLearnsetDataTable = ${JSON.stringify(learnsets, null, '\t')};`);
 
