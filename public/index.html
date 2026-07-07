@@ -17,7 +17,7 @@
 
     <div class="flex h-[calc(100vh-73px)]">
         <!-- BARRE LATERALE : LISTE DES POKEMON -->
-        <aside class="w-1/4 bg-gray-800 border-r border-gray-700 flex flex-col">
+        <aside class="w-300 bg-gray-800 border-r border-gray-700 flex flex-col">
             <div class="p-3 border-b border-gray-700 space-y-2">
                 <input type="text" id="searchBar" oninput="filterPokemon()" placeholder="Rechercher un Pokémon..." class="w-full bg-gray-700 border border-gray-600 p-2 rounded text-white focus:outline-none">
                 <button onclick="createNewFakemon()" class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold transition">+ CRÉER UN FAKEMON</button>
@@ -28,107 +28,141 @@
         </aside>
 
         <!-- ESPACE DE TRAVAIL PRINCIPAL -->
-        <main class="w-3/4 p-6 overflow-y-auto space-y-6">
-            <div id="editorZone" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
-                
-                <!-- COLONNE GAUCHE : IDENTITÉ & IMAGES & STATS -->
-                <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
-                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Identité & Caractéristiques</h3>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm text-gray-400">Nom du Fakemon</label>
-                            <input type="text" id="fkName" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
-                        </div>
-                        <div>
-                            <label class="block text-sm text-gray-400">Numéro Pokédex</label>
-                            <input type="number" id="fkNum" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
-                        </div>
-                    </div>
+		<div class="flex flex-col flex-grow">
+			<div class="flex bg-gray-800 border-b border-gray-700">
+				<button onclick="switchTab('editor')" class="px-6 py-3 border-b-2 border-red-500 text-white font-bold">Édition Pokémon</button>
+				<button onclick="switchTab('export')" class="px-6 py-3 border-b-2 border-transparent hover:border-gray-500 text-gray-400 font-bold">Export Textes</button>
+			</div>
 
-                    <!-- RE-DIMENSIONNEMENT IMAGE VIA CANVAS -->
-                    <div>
-                        <label class="block text-sm text-gray-400">Illustration (Ajustement Auto)</label>
-                        <input type="file" id="fkImageFile" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-sm text-gray-400 mt-1 file:bg-gray-700 file:text-white file:border-0 file:p-2 file:rounded file:cursor-pointer">
-                        <div class="flex space-x-4 mt-3 bg-gray-900 p-3 rounded justify-around">
-                            <div class="text-center">
-                                <span class="text-xs text-gray-400">Combat (96x96)</span>
-                                <canvas id="canvas96" width="96" height="96" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
-                            </div>
-                            <div class="text-center">
-                                <span class="text-xs text-gray-400">Icône (40x30)</span>
-                                <canvas id="canvas40" width="40" height="30" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
-                            </div>
-                        </div>
-                    </div>
+			<div id="tab-editor" class="p-4 overflow-y-auto">
+			    <main class="w-3/4 p-6 overflow-y-auto space-y-6">
+					<div id="editorZone" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+						
+						<!-- COLONNE GAUCHE : IDENTITÉ & IMAGES & STATS -->
+						<section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
+							<h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Identité & Caractéristiques</h3>
+							
+							<div class="grid grid-cols-2 gap-4">
+								<div>
+									<label class="block text-sm text-gray-400">Nom du Fakemon</label>
+									<input type="text" id="fkName" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
+								</div>
+								<div>
+									<label class="block text-sm text-gray-400">Numéro Pokédex</label>
+									<input type="number" id="fkNum" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
+								</div>
+							</div>
 
-                    <!-- TYPES ACTUELS -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-1">Types Sélectionnés</label>
-                        <div id="selectedTypes" class="flex gap-2 min-h-[40px] p-2 bg-gray-900 rounded border border-gray-700"></div>
-                    </div>
+							<!-- RE-DIMENSIONNEMENT IMAGE VIA CANVAS -->
+							<div>
+								<label class="block text-sm text-gray-400">Illustration (Ajustement Auto)</label>
+								<input type="file" id="fkImageFile" accept="image/*" onchange="handleImageUpload(event)" class="w-full text-sm text-gray-400 mt-1 file:bg-gray-700 file:text-white file:border-0 file:p-2 file:rounded file:cursor-pointer">
+								<div class="flex space-x-4 mt-3 bg-gray-900 p-3 rounded justify-around">
+									<div class="text-center">
+										<span class="text-xs text-gray-400">Combat (96x96)</span>
+										<canvas id="canvas96" width="96" height="96" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
+									</div>
+									<div class="text-center">
+										<span class="text-xs text-gray-400">Icône (40x30)</span>
+										<canvas id="canvas40" width="40" height="30" class="border border-gray-600 bg-gray-800 mx-auto mt-1"></canvas>
+									</div>
+								</div>
+							</div>
 
-                    <!-- STATISTIQUES EDITABLES -->
-                    <div>
-                        <label class="block text-sm text-gray-400 mb-2">Statistiques de Base</label>
-                        <div class="grid grid-cols-3 gap-2" id="statsContainer">
-                            <!-- Généré via JS -->
-                        </div>
-                    </div>
-					<div class="flex justify-between items-center mb-2">
-						<button onclick="randomizeStats()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition">
-							🎲 Random
-						</button>
+							<!-- TYPES ACTUELS -->
+							<div>
+								<label class="block text-sm text-gray-400 mb-1">Types Sélectionnés</label>
+								<div id="selectedTypes" class="flex gap-2 min-h-[40px] p-2 bg-gray-900 rounded border border-gray-700"></div>
+							</div>
+
+							<!-- STATISTIQUES EDITABLES -->
+							<div>
+								<label class="block text-sm text-gray-400 mb-2">Statistiques de Base</label>
+								<div class="grid grid-cols-3 gap-2" id="statsContainer">
+									<!-- Généré via JS -->
+								</div>
+							</div>
+							<div class="flex justify-between items-center mb-2">
+								<button onclick="randomizeStats()" class="text-xs bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded transition">
+									🎲 Random
+								</button>
+							</div>
+
+							<!-- CALCULATEUR DE FAIBLESSES DYNAMIQUE -->
+							<div>
+								<h4 class="text-sm font-bold text-gray-400 mb-2">Profil Défensif (Faiblesses & Résistances)</h4>
+								<div id="typeMatchups" class="grid grid-cols-3 gap-1 text-center text-xs"></div>
+							</div>
+						</section>
+
+						<!-- COLONNE CENTRALE : CAPACITÉS & TALENTS CHOISIS -->
+						<section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
+							<h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Configuration du Kit</h3>
+							
+							<div>
+								<h4 class="font-bold text-gray-300 mb-1">Talents du Fakemon</h4>
+								<div id="selectedAbilities" class="space-y-1 max-h-[200px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+							</div>
+
+							<div>
+								<h4 class="font-bold text-gray-300 mb-1">Attaques du Pool (Learnset)</h4>
+								<div id="selectedMoves" class="grid grid-cols-1 gap-2 max-h-[800px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
+							</div>
+						</section>
+						
+						<!-- COLONNE DROITE : CHOIX TYPES & CAPACITÉS & TALENTS -->
+						<section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4 flex flex-col">
+							<h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Banque de Données</h3>
+							<!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
+							<div class="border-t border-gray-700 pt-4">
+								<div class="flex border-b border-gray-600 text-sm">
+									<button onclick="switchTab('tabTypes')" class="tab-btn px-4 py-2 bg-gray-700 text-white font-medium rounded-t">Types</button>
+									<button onclick="switchTab('tabAbilities')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Talents</button>
+									<button onclick="switchTab('tabMoves')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Attaques</button>
+								</div>
+
+								<!-- CONTENU DES ONGLETS -->
+								<div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-3 gap-2"></div>
+								<div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2"></div>
+								<div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2">
+									<input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
+									<div id="movesContainer" class="space-y-1"></div>
+								</div>
+							</div>
+						</section>
+
 					</div>
+					<div id="welcomeZone" class="text-center py-20 text-gray-500 text-lg">
+						Sélectionnez ou créez un Pokémon pour ouvrir l'atelier d'édition.
+					</div>
+				</main>
+			</div>
 
-                    <!-- CALCULATEUR DE FAIBLESSES DYNAMIQUE -->
-                    <div>
-                        <h4 class="text-sm font-bold text-gray-400 mb-2">Profil Défensif (Faiblesses & Résistances)</h4>
-                        <div id="typeMatchups" class="grid grid-cols-3 gap-1 text-center text-xs"></div>
-                    </div>
-                </section>
+			<div id="tab-export" class="hidden p-6 space-y-6">
+				<h2 class="text-xl font-bold text-white">Export des fichiers de données</h2>
+				<div id="editorZone" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					<div>
+						<label class="text-sm text-gray-400">Pokedex</label>
+						<textarea id="export-pokedex" readonly class="w-full h-32 bg-gray-900 border border-gray-700 p-2 text-xs font-mono text-green-400 rounded"></textarea>
+						<button onclick="copyToClipboard('export-pokedex')" class="mt-1 text-xs bg-blue-600 px-2 py-1 rounded">Copier</button>
+					</div>
+					<div>
+						<label class="text-sm text-gray-400">Learnsets</label>
+						<textarea id="export-learnsets" readonly class="w-full h-32 bg-gray-900 border border-gray-700 p-2 text-xs font-mono text-green-400 rounded"></textarea>
+						<button onclick="copyToClipboard('export-learnsets')" class="mt-1 text-xs bg-blue-600 px-2 py-1 rounded">Copier</button>
+					</div>
+					<div>
+						<label class="text-sm text-gray-400">formatsData</label>
+						<textarea id="export-formatsData" readonly class="w-full h-32 bg-gray-900 border border-gray-700 p-2 text-xs font-mono text-green-400 rounded"></textarea>
+						<button onclick="copyToClipboard('export-formatsData')" class="mt-1 text-xs bg-blue-600 px-2 py-1 rounded">Copier</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		
+		
 
-                <!-- COLONNE CENTRALE : CAPACITÉS & TALENTS CHOISIS -->
-                <section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4">
-                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Configuration du Kit</h3>
-                    
-                    <div>
-                        <h4 class="font-bold text-gray-300 mb-1">Talents du Fakemon</h4>
-                        <div id="selectedAbilities" class="space-y-1 max-h-[200px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
-                    </div>
-
-                    <div>
-                        <h4 class="font-bold text-gray-300 mb-1">Attaques du Pool (Learnset)</h4>
-                        <div id="selectedMoves" class="grid grid-cols-1 gap-2 max-h-[800px] overflow-y-auto p-2 bg-gray-900 rounded border border-gray-700"></div>
-                    </div>
-				</section>
-				
-				<!-- COLONNE DROITE : CHOIX TYPES & CAPACITÉS & TALENTS -->
-				<section class="bg-gray-800 p-5 rounded-lg border border-gray-700 space-y-4 flex flex-col">
-                    <h3 class="text-xl font-bold border-b border-gray-700 pb-2 text-red-400">Banque de Données</h3>
-					<!-- SYSTEME D'ONGLETS DE SELECTION DE CONTENU -->
-                    <div class="border-t border-gray-700 pt-4">
-                        <div class="flex border-b border-gray-600 text-sm">
-                            <button onclick="switchTab('tabTypes')" class="tab-btn px-4 py-2 bg-gray-700 text-white font-medium rounded-t">Types</button>
-                            <button onclick="switchTab('tabAbilities')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Talents</button>
-                            <button onclick="switchTab('tabMoves')" class="tab-btn px-4 py-2 hover:bg-gray-700 text-gray-400 font-medium rounded-t">Attaques</button>
-                        </div>
-
-                        <!-- CONTENU DES ONGLETS -->
-                        <div id="tabTypes" class="tab-content p-3 bg-gray-700 rounded-b grid grid-cols-2 gap-2"></div>
-                        <div id="tabAbilities" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2"></div>
-                        <div id="tabMoves" class="tab-content hidden p-3 bg-gray-700 rounded-b max-h-[950px] overflow-y-auto space-y-2">
-                            <input type="text" id="searchMove" oninput="searchInMoves()" placeholder="Filtrer une attaque..." class="w-full bg-gray-600 border border-gray-500 p-1.5 rounded text-sm mb-2 text-white">
-                            <div id="movesContainer" class="space-y-1"></div>
-                        </div>
-                    </div>
-                </section>
-
-            </div>
-            <div id="welcomeZone" class="text-center py-20 text-gray-500 text-lg">
-                Sélectionnez ou créez un Pokémon pour ouvrir l'atelier d'édition.
-            </div>
-        </main>
     </div>
 
     <!-- LOGIQUE LOGICIELLE FRONTEND (SCRIPT ENGINE) -->
@@ -151,14 +185,21 @@
 			}
 		}
 	
-		// Fonction utilitaire pour créer le sprite
+		// Fonction utilitaire pour créer le sprite des types
 		function getTypeSprite(typeName) {
 		// Utilisation d'une classe CSS pour le contrôle de taille
 			return `<img src="./sprites/${typeName.toLowerCase()}.png"
                  class="w-20 h-4 object-contain inline-block"`;
 		}
+		
+		// Fonction utilitaire pour créer le sprite des catégories
+		function getCatSprite(catName) {
+		// Utilisation d'une classe CSS pour le contrôle de taille
+			return `<img src="./sprites/${catName.toLowerCase()}.png"
+                 class="w-10 h-4 object-contain inline-block"`;
+		}
 	
-	// Nettoie un nom pour correspondre aux clés de la base de données Smogon (ex: "U-turn" -> "uturn")
+		// Nettoie un nom pour correspondre aux clés de la base de données Smogon (ex: "U-turn" -> "uturn")
 		function toID(text) {
 			return text ? text.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
 		}
@@ -191,10 +232,8 @@
 		async function loadFromGitHub(e) {
 			// 1. On empêche le comportement par défaut si nécessaire
 			if (e) e.preventDefault();
-
 			const defaultUrl = "https://github.com/AayLith/DH2/tree/master/data/mods/hicsuntdracones";
 			const userUrl = prompt("Entrez l'URL GitHub de votre dossier de mod :", defaultUrl);
-			
 			if (!userUrl) return;
 
 			// 2. Récupération sécurisée du bouton
@@ -219,36 +258,10 @@
 					db.pokedex = new Function(`return ${data.pokedex}`)();
 					db.formatsData = new Function(`return ${data.formatsData}`)();
 					db.learnsets = new Function(`return ${data.learnsets}`)();
-					db.moves = new Function(`return ${data.moves}`)();
 					// db.abilities = new Function(`return ${data.abilities}`)();
 					// db.moves = JSON.parse(data.moves); // Plus de new Function, plus d'erreur de syntaxe !
 					// db.abilities = JSON.parse(data.abilities); // Plus de new Function, plus d'erreur de syntaxe !
-					
-					const movesText = new Function(`return ${data.movesText}`)();
-					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
-					
-					// 1. On s'assure que tous les talents de text/abilities.ts sont référencés
-					if (abilitiesText) {
-						Object.keys(abilitiesText).forEach(id => {
-							if (!db.abilities[id]) {
-								db.abilities[id] = { name: abilitiesText[id].name || id };
-							}
-							db.abilities[id].desc = abilitiesText[id].desc || "";
-							db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
-						});
-					}
-
-					// 2. On s'assure que toutes les attaques de text/moves.ts sont référencées
-					if (movesText) {
-						Object.keys(movesText).forEach(id => {
-							if (!db.moves[id]) {
-								db.moves[id] = { name: movesText[id].name || id };
-							}
-							db.moves[id].desc = movesText[id].desc || "";
-							db.moves[id].shortDesc = movesText[id].shortDesc || "";
-						});
-					}
-					
+										
 					buildUILists();
 					renderPokemonSidebar();
 					alert("✅ Données, talents et descriptions synchronisés avec succès !");
@@ -274,13 +287,24 @@
                 const li = document.createElement('li');
                 li.className = "p-3 hover:bg-gray-700 cursor-pointer flex justify-between items-center transition";
                 li.onclick = () => selectPokemon(id);
+				const totalStats = Object.values(pk.baseStats).reduce((a, b) => a + b, 0);
                 li.innerHTML = `
-                    <div>
-                        <strong class="block text-xl text-gray-200">${pk.name}</strong>
-                        <span class="text-xs text-gray-500 font-mono">#${pk.num}</span>
-                    </div>
-                    <div class="flex gap-1">
-						${pk.types.map(t => `<span class="p-0.5">${getTypeSprite(t)}</span>`).join('')}
+					<div>
+						<div class="flex justify-between">
+							<div><strong class="block text-xl text-gray-200">#${pk.num}   ${pk.name}</strong></div>
+							<div class="flex gap-1">
+								${pk.types.map(t => `<span class="p-0.5">${getTypeSprite(t)}</span>`).join('')}
+							</div>
+						</div>
+						<div class="text-xs text-gray-500 font-mono grid grid-cols-7 text-left">
+							<span class="text-red-400">HP:${pk.baseStats.hp}</span>
+							<span class="text-orange-400">Atk:${pk.baseStats.atk}</span>
+							<span class="text-yellow-400">Def:${pk.baseStats.def}</span>
+							<span class="text-green-400">SpA:${pk.baseStats.spa}</span>
+							<span class="text-lime-400">SpD:${pk.baseStats.spd}</span>
+							<span class="text-cyan-400">Spe:${pk.baseStats.spe}</span>
+							<span class="text-pink-500 text-sm text-right">Total:${totalStats}</span>
+						</div>
 					</div>
                 `;
                 list.appendChild(li);
@@ -309,26 +333,60 @@
             // Remplir l'onglet des Attaques
             searchInMoves();
         }
+		
+		function displayMove(mv, id) {
+			const description = mv.shortDesc || mv.desc || "Aucune description disponible.";
+			const category = mv.category || "Error";
+			
+			// On récupère le sprite du type (ou une valeur par défaut)
+			const typeSprite = mv.type ? getTypeSprite(mv.type) : "???"; 
+			const catSprite = mv.type ? getCatSprite(mv.category) : "???"; 
+				
+			return`
+				<div class="flex justify-stretch font-bold">
+					<span class="text-lg text-white">${mv.name}</span>
+					<span> 
+						<span class="">${typeSprite}</span> 
+						<span class="">${catSprite}</span> 
+					</span>
+					<span class="text-base text-gray-300">Pwr: ${mv.basePower || '—'} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
+				</div>
+				<div class="text-gray-400 text-sm truncate">${description}</div>`;
+		}
 
 		function searchInMoves() {
 			const query = document.getElementById('searchMove').value.toLowerCase();
 			const container = document.getElementById('movesContainer');
 			container.innerHTML = "";
 			
-			Object.keys(db.moves).filter(id => db.moves[id].name.toLowerCase().includes(query)).slice(0, 40).forEach(id => {
-				const mv = db.moves[id];
-				// Récupération de la description fraîchement fusionnée
-				const description = mv.shortDesc || mv.desc || "Aucune description disponible.";
-				const category = mv.category || "Error";
+			// On trie les IDs par nom avant de filtrer pour un meilleur rendu
+			const sortedMoveIds = Object.keys(db.moves).sort((a, b) => {
+				return db.moves[a].name.localeCompare(db.moves[b].name);
+			});
 
-				container.innerHTML += `
-					<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">
-						<div class="flex justify-between font-bold">
-							<span class="text-white">${mv.name} <span class="text-[10px] px-1 py-0.2 bg-gray-800 rounded text-gray-300 ml-1">${mv.type} - ${category}</span></span>
-							<span class="text-gray-300">Pwr: ${mv.basePower || 0} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
-						</div>
-						<div class="text-gray-400 text-[11px] truncate">${description}</div>
-					</div>`;
+			sortedMoveIds.filter(id => {
+				const mv = db.moves[id];
+				if (!mv) return false;
+
+				// On définit les champs de recherche
+				const name = (mv.name || "").toLowerCase();
+				const type = (mv.type || "").toLowerCase();
+				const desc = (mv.shortDesc || mv.desc || "").toLowerCase();
+				// On récupère les flags si ils existent (convertis en string)
+				const flags = mv.flags ? Object.keys(mv.flags).join(" ").toLowerCase() : "";
+
+				// Condition : le query est présent dans l'un des champs
+				return name.includes(query) || 
+					   type.includes(query) || 
+					   desc.includes(query) || 
+					   flags.includes(query);
+			})
+			//.slice(0, 100)
+			.forEach(id => {
+				const mv = db.moves[id];
+				container.innerHTML += `<div onclick="addMoveToFakemon('${id}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">`
+									+ displayMove(mv, id)
+									+ `</div>`;
 			});
 		}
 
@@ -433,7 +491,7 @@
 				div.innerHTML += `
 					<div class="p-2 bg-gray-700 border border-gray-600 rounded text-xs flex flex-col space-y-1 relative">
 						<div class="flex justify-between items-center font-bold text-white">
-							<span>Slot ${slot}: ${abData.name} ${isHidden}</span>
+							<span class="text-xl">${slot}: ${abData.name}</span>
 							<button onclick="removeAbility('${slot}')" class="text-red-400 hover:text-red-200 font-black text-sm px-1">×</button>
 						</div>
 						<div class="text-gray-400 italic text-[11px] leading-tight">${abData.shortDesc || abData.desc || 'Pas de description.'}</div>
@@ -461,36 +519,22 @@
 			div.innerHTML = "";
 			const lset = db.learnsets[activeId] ? db.learnsets[activeId].learnset : {};
 
-			Object.keys(lset).forEach(moveId => {
+			// On trie les keys (noms des moves) par ordre alphabétique
+			const sortedLearnset = Object.keys(lset).sort((a, b) => {
+				const nameA = db.moves[toID(a)] ? db.moves[toID(a)].name : a;
+				const nameB = db.moves[toID(b)] ? db.moves[toID(b)].name : b;
+				return nameA.localeCompare(nameB);
+			});
+
+			sortedLearnset.forEach(moveId => {
 				const id = toID(moveId);
 				const mv = db.moves[id];
-				// On va chercher toutes les infos de l'attaque
 
-				if (!mv) {
-					console.log("Attaque introuvable :", moveId);
-					return;
-				}
+				if (!mv) return;
 
-				const type = mv.type || "???"; // Valeur par défaut si undefined
-				const category = mv.category || "Error";
-				const power = mv.basePower || "—";
-				const accuracy = mv.accuracy === true ? "—" : `${mv.accuracy}%`;
-				const description = mv.shortDesc || mv.desc || "Aucune description.";
-
-				// Code couleur selon la catégorie d'attaque
-				let catColor = "bg-gray-800 text-gray-400";
-				if (category === "Physical") catColor = "bg-red-950 text-red-300 border border-red-800";
-				if (category === "Special") catColor = "bg-blue-950 text-blue-300 border border-blue-800";
-
-				div.innerHTML += `
-					<div class="bg-gray-700 border border-gray-600 p-2 rounded text-xs flex flex-col justify-between space-y-1.5 relative">
-						<div class="flex justify-between font-bold">
-							<span class="text-white">${mv.name} <span class="text-[10px] px-1 py-0.2 bg-gray-800 rounded text-gray-300 ml-1">${mv.type} - ${category}</span></span>
-							<span class="text-gray-300">Pwr: ${mv.basePower || 0} / Acc: ${mv.accuracy === true ? '—' : mv.accuracy + '%'}</span>
-						</div>
-						<div class="text-gray-400 text-[11px] truncate">${description}</div>
-						<button onclick="removeMove('${moveId}')" class="absolute top-1 right-1.5 text-red-400 hover:text-red-200 font-bold text-sm">×</button>
-					</div>`;
+				div.innerHTML += `<div onclick="removeMove('${moveId}')" class="p-2 bg-gray-600 hover:bg-gray-500 rounded text-xs cursor-pointer block space-y-0.5 transition">`
+								+ displayMove(mv, id)
+								+ `</div>`;
 			});
 		}
 
@@ -636,6 +680,64 @@
 					</div>`;
 			});
 		}
+		
+		window.onload = async () => {
+			try {
+				const res = await fetch('/api/load-base-data');
+				const data = await res.json();
+				
+				if (data.success) {
+					db.moves = JSON.parse(data.moves);
+					db.abilities = JSON.parse(data.abilities);
+					
+					const movesText = new Function(`return ${data.movesText}`)();
+					const abilitiesText = new Function(`return ${data.abilitiesText}`)();
+					
+					// Fusion des textes
+					Object.keys(movesText).forEach(id => {
+						if (db.moves[id]) {
+							db.moves[id].desc = movesText[id].desc || "";
+							db.moves[id].shortDesc = movesText[id].shortDesc || "";
+						}
+					});
+					Object.keys(abilitiesText).forEach(id => {
+						if (db.abilities[id]) {
+							db.abilities[id].desc = abilitiesText[id].desc || "";
+							db.abilities[id].shortDesc = abilitiesText[id].shortDesc || "";
+						}
+					});
+					console.log("✅ Données de base Smogon chargées.");
+				}
+			} catch (e) {
+				console.error("Erreur chargement initial :", e);
+			}
+		};
+		
+		// Switch d'onglet
+		function switchTab(tabName) {
+			document.getElementById('tab-editor').classList.toggle('hidden', tabName !== 'editor');
+			document.getElementById('tab-export').classList.toggle('hidden', tabName !== 'export');
+			
+			// Si on passe sur l'export, on génère les textes à la volée
+			if (tabName === 'export') {
+				generateExportTexts();
+			}
+		}
+
+		// Génération des textes
+		function generateExportTexts() {
+			document.getElementById('export-pokedex').value = JSON.stringify(db.pokedex, null, 4);
+			document.getElementById('export-formatsData').value = JSON.stringify(db.formatsData, null, 4);
+			document.getElementById('export-learnsets').value = JSON.stringify(db.learnsets, null, 4);
+		}
+
+		// Fonction utilitaire de copie
+		function copyToClipboard(elementId) {
+			const copyText = document.getElementById(elementId);
+			copyText.select();
+			document.execCommand("copy");
+			alert("Copié dans le presse-papier !");
+		}
     </script>
 </body>
-</html>
+</html>});

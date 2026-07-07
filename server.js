@@ -83,33 +83,25 @@ function parseShowdownMoves(tsContent) {
 }
 
 function parseShowdownAbilities(tsContent) {
-    // 1. Isoler la chaîne entre le premier { et le dernier }
-    const start = tsContent.indexOf('{');
-    const end = tsContent.lastIndexOf('}');
-    const content = tsContent.substring(start + 1, end);
-
-    // 2. Découpage intelligent : on cherche chaque début d'attaque "id": {
-    // On split par "}," pour obtenir chaque bloc individuellement
-    const blocks = content.split(/\},\s*"/);
-    const cleanedAbilities = {};
-
-    blocks.forEach((block, index) => {
-        // On nettoie le nom de l'id
-        const idMatch = block.match(/"?([^"]+)"?:\s*{/);
-        if (!idMatch) return;
+	const cleanedAbilities = {};
+    // Découpage par "num:" comme pour les attaques
+    const blocks = tsContent.split(/num:\s*/);
+    
+    for (let i = 1; i < blocks.length; i++) {
+        const s = blocks[i];
+        const idMatch = s.match(/"?([^"]+)"?:\s*{/);
+        if (!idMatch) continue;
         
         const id = idMatch[1];
         
-        // On extrait juste ce qui nous intéresse dans ce bloc
-        // On cherche 'type:' suivi du type
-        const flMatch = block.match(/flags:\s*(\d+)/);
+        // Extraction simple du nom
+        const nameMatch = s.match(/name:\s*['"]([^'"]+)['"]/);
         
         cleanedAbilities[id] = {
-            name: id,
-			flags: flMatch ? flMatch[1] : "Error"
+            name: nameMatch ? nameMatch[1] : id,
+            // On peut ajouter d'autres champs ici si nécessaire
         };
-    });
-
+    }
     return JSON.stringify(cleanedAbilities);
 }
 
@@ -174,6 +166,32 @@ app.post('/api/save-fakemons', (req, res) => {
 
 app.listen(PORT, () => console.log(`Fakemon Creator actif sur http://localhost:${PORT}`));
 
+// server.js
+
+app.get('/api/load-base-data', async (req, res) => {
+    try {
+        const smogonBaseUrl = "https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data";
+        
+        // On récupère uniquement les données mécaniques de Smogon
+        const [movesRes, abilitiesRes, movesTextRes, abilitiesTextRes] = await Promise.all([
+            fetch(`${smogonBaseUrl}/moves.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/abilities.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())
+        ]);
+
+        res.json({
+            success: true,
+            moves: parseShowdownMoves(movesRes), // Utilise ton parser robuste
+            abilities: parseShowdownAbilities(abilitiesRes),
+            movesText: parseShowdownTS(movesTextRes),
+            abilitiesText: parseShowdownTS(abilitiesTextRes)
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // API : Charger les données depuis un dossier de Mod GitHub spécifique
 app.post('/api/load-mod', async (req, res) => {
     try {
@@ -200,75 +218,22 @@ app.post('/api/load-mod', async (req, res) => {
             fetchFileWithFallback(`${baseUrl}/pokedex.ts`, 'export const Pokedex = {};'),
             fetchFileWithFallback(`${baseUrl}/formats-data.ts`, 'export const FormatsData = {};'),
             fetchFileWithFallback(`${baseUrl}/learnsets.ts`, 'export const Learnsets = {};'),
-			fetchFileWithFallback(`${smogonBaseUrl}/moves.ts`, 'export const Moves = {};'),
-			fetchFileWithFallback(`${smogonBaseUrl}/abilities.ts`, 'export const Abilities = {};'),
-            fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),       // 🌟 Nouveau : Textes des attaques
-            fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())   // 🌟 Nouveau : Textes des talents
+			//fetchFileWithFallback(`${smogonBaseUrl}/moves.ts`, 'export const Moves = {};'),
+			//fetchFileWithFallback(`${smogonBaseUrl}/abilities.ts`, 'export const Abilities = {};'),
+            //fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),       // 🌟 Nouveau : Textes des attaques
+            //fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())   // 🌟 Nouveau : Textes des talents
         ]);
 		// console.log(parseShowdownTS(movesRes).substring(0, 1000))
-
-		const movesRaw = parseShowdownTS(movesRes); // Ton texte brut
-		const abilitiesRaw = parseShowdownTS(abilitiesRes); // Ton texte brut
-
 		// On transforme le texte brut en un objet "allégé" (Lightweight)
 		// On ne garde que les infos nécessaires à l'UI
-		try {
-			/*const fullMoves = {};
-			const fullAbilities = {};
-			
-			// On utilise une Regex pour isoler chaque bloc d'attaque 
-			// Format typique dans moves.ts : "id": { ... },
-			// On cible le nom de l'attaque et on extrait les infos principales
-			const regex = /"([^"]+)":\s*{([^}]+)}/g;
-			let match;
-			
-			while ((match = regex.exec(movesRaw)) !== null) {
-				const id = match[1];
-				const content = match[2];
-
-				// On crée un objet simple à partir des propriétés de base
-				const move = {};
-				
-				// Extraction manuelle des champs clés via recherche simple
-				if (content.includes('accuracy:')) {
-					const acMatch = content.match(/accuracy:\s*(\d+)/);
-					move.accuracy = acMatch ? parseInt(acMatch[1]) : 0;
-				}
-				if (content.includes('basePower:')) {
-					const bpMatch = content.match(/basePower:\s*(\d+)/);
-					move.basePower = bpMatch ? parseInt(bpMatch[1]) : 0;
-				}
-				if (content.includes('category:')) {
-					const catMatch = content.match(/category:\s*['"]([^'"]+)['"]/);
-					move.category = catMatch ? catMatch[1] : "Error";
-				}
-				if (content.includes('type:')) {
-					const typeMatch = content.match(/type:\s*['"]([^'"]+)['"]/);
-					move.type = typeMatch ? typeMatch[1] : "Error";
-				}
-				if (content.includes('flags:')) {
-					const flMatch = content.match(/flags:\s*(\d+)/);
-					move.flags = flMatch ? flMatch[1] : "";
-				}
-				move.name = id; // On utilisera le text/moves.ts pour le vrai nom
-				
-				fullMoves[id] = move;
-			}
-			
-			while ((match = regex.exec(abilitiesRaw)) !== null) {
-				const id = match[1];
-				const content = match[2];
-
-				// On crée un objet simple à partir des propriétés de base
-				const ability = {};
-				
-				ability.name = id; // On utilisera le text/moves.ts pour le vrai nom
-				
-				fullAbilities[id] = ability;
-			}*/
-			
-			// Maintenant fullMoves est un objet JSON pur
+		try {			
 			res.json({
+				success: true,
+				pokedex: parseShowdownTS(pokedexRes),
+				formatsData: parseShowdownTS(formatsRes),
+				learnsets: parseShowdownTS(learnsetsRes)
+			});
+			/*res.json({
 				success: true,
 				// moves: JSON.stringify(fullMoves),
 				moves: parseShowdownMoves(movesRes),
@@ -280,7 +245,7 @@ app.post('/api/load-mod', async (req, res) => {
 				movesText: parseShowdownTS(movesTextRes),         // 🌟 Transmis au client
 				abilitiesText: parseShowdownTS(abilitiesTextRes)   // 🌟 Transmis au client
 				// ... reste des champs
-			});
+			});*/
 		} catch (e) {
 			console.error("Erreur de parsing:", e);
 		}
@@ -300,5 +265,28 @@ app.post('/api/load-mod', async (req, res) => {
         });*/
     } catch (error) {
         res.status(500).send(`Erreur interne du serveur : ${error.message}`);
+    }
+});
+
+app.get('/api/load-base-data', async (req, res) => {
+    try {
+        const smogonBaseUrl = "https://raw.githubusercontent.com/smogon/pokemon-showdown/master/data";
+        
+        const [movesRes, abilitiesRes, movesTextRes, abilitiesTextRes] = await Promise.all([
+            fetch(`${smogonBaseUrl}/moves.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/abilities.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/text/moves.ts`).then(r => r.text()),
+            fetch(`${smogonBaseUrl}/text/abilities.ts`).then(r => r.text())
+        ]);
+
+        res.json({
+            success: true,
+            moves: parseShowdownMoves(movesRes),
+            abilities: parseShowdownTS(abilitiesRes),
+            movesText: parseShowdownTS(movesTextRes),
+            abilitiesText: parseShowdownTS(abilitiesTextRes)
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
