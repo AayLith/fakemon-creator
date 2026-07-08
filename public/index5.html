@@ -339,12 +339,6 @@
 					buildUILists();
 					renderPokemonSidebar();
 					alert("✅ Données, synchronisés avec succès !");
-
-					// Chargement des sprites en tâche de fond (ne bloque pas l'alerte
-					// ci-dessus, peut prendre du temps selon le nombre de Pokémon)
-					loadSpritesFromGitHub(userUrl).catch(err => {
-						console.error("Erreur lors du chargement des sprites :", err);
-					});
 				} else {
 					alert(`❌ Échec du serveur : ${data.error}`);
 				}
@@ -759,112 +753,6 @@
             // Nom de fichier suggéré au clic-droit > "Enregistrer l'image sous"
             dl96.setAttribute('download', `${id}.png`);
             dl40.setAttribute('download', `${id}.png`);
-        }
-
-        // --- Chargement des sprites existants depuis le dépôt GitHub du mod ---
-
-        // Transforme une URL "arbre" GitHub (…/tree/branch/chemin) en ses composants,
-        // pour pouvoir construire des URLs raw.githubusercontent.com.
-        function parseGithubTreeUrl(url) {
-            try {
-                const u = new URL(url);
-                if (u.hostname !== 'github.com') return null;
-                const parts = u.pathname.split('/').filter(Boolean);
-                // parts attendues : [owner, repo, 'tree', branch, ...chemin]
-                if (parts.length < 4 || parts[2] !== 'tree') return null;
-                return {
-                    owner: parts[0],
-                    repo: parts[1],
-                    branch: parts[3],
-                    path: parts.slice(4).join('/')
-                };
-            } catch (e) {
-                return null;
-            }
-        }
-
-        // Tente de charger une image ; rejette si elle n'existe pas (404, etc.)
-        function tryLoadImage(url) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous'; // nécessaire pour pouvoir lire le canvas ensuite
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error('Introuvable : ' + url));
-                img.src = url;
-            });
-        }
-
-        // Essaie pokemonId.png, puis pokemonId.webp si le .png n'existe pas.
-        async function loadSpriteWithFallback(baseUrl, id) {
-            try {
-                return await tryLoadImage(`${baseUrl}/${id}.png`);
-            } catch (e) {
-                try {
-                    return await tryLoadImage(`${baseUrl}/${id}.webp`);
-                } catch (e2) {
-                    return null;
-                }
-            }
-        }
-
-        // Normalise une image chargée vers un DataURL à la taille cible (sans
-        // ajout de transparent : les assets du dépôt sont déjà au bon format).
-        function imageToDataURL(img, w, h) {
-            const c = document.createElement('canvas');
-            c.width = w;
-            c.height = h;
-            const ctx = c.getContext('2d');
-            ctx.clearRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            try {
-                return c.toDataURL('image/png');
-            } catch (e) {
-                console.warn("Impossible de lire l'image (CORS ?) :", e);
-                return null;
-            }
-        }
-
-        // Charge, pour chaque Pokémon du pokedex, son sprite (/front, 96x96)
-        // et son icône (/icons, 40x30) s'ils existent dans le dépôt GitHub du mod.
-        async function loadSpritesFromGitHub(githubUrl) {
-            const parsed = parseGithubTreeUrl(githubUrl);
-            if (!parsed) {
-                console.warn("URL GitHub non reconnue, chargement des sprites ignoré.");
-                return;
-            }
-
-            const rawBase = `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/${parsed.branch}/${parsed.path}`;
-            const frontBase = `${rawBase}/front`;
-            const iconsBase = `${rawBase}/icons`;
-
-            const ids = Object.keys(db.pokedex);
-            let found = 0;
-            const CONCURRENCY = 6; // on évite de tirer des centaines de requêtes en même temps
-
-            let cursor = 0;
-            async function worker() {
-                while (cursor < ids.length) {
-                    const id = ids[cursor++];
-                    const [frontImg, iconImg] = await Promise.all([
-                        loadSpriteWithFallback(frontBase, id),
-                        loadSpriteWithFallback(iconsBase, id)
-                    ]);
-
-                    if (frontImg || iconImg) {
-                        const existing = localImages[id] || {};
-                        const sprite = frontImg ? imageToDataURL(frontImg, 96, 96) : existing.sprite;
-                        const icon = iconImg ? imageToDataURL(iconImg, 40, 30) : existing.icon;
-                        localImages[id] = { sprite, icon };
-                        found++;
-
-                        // Si ce Pokémon est actuellement affiché, on rafraîchit sa preview
-                        if (id === activeId) displayFakemonImages(id);
-                    }
-                }
-            }
-
-            await Promise.all(Array.from({ length: CONCURRENCY }, worker));
-            console.log(`✅ Sprites trouvés dans le dépôt : ${found}/${ids.length}`);
         }
 
 		function calculateWeaknesses() {
