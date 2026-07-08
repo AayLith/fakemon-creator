@@ -15,9 +15,9 @@
         </div>
     </header>
 
-    <div class="flex h-[calc(100vh-50px)]">
+    <div class="flex h-[calc(100vh-73px)]">
         <!-- BARRE LATERALE : LISTE DES POKEMON -->
-        <aside class="w-[400px] shrink-0 bg-gray-800 border-r border-gray-700 flex flex-col">
+        <aside class="w-[300px] shrink-0 bg-gray-800 border-r border-gray-700 flex flex-col">
             <div class="p-3 border-b border-gray-700 space-y-2">
                 <input type="text" id="searchBar" oninput="filterPokemon()" placeholder="Rechercher un Pokémon..." class="w-full bg-gray-700 border border-gray-600 p-2 rounded text-white focus:outline-none">
                 <button onclick="createNewFakemon()" class="w-full bg-red-600 hover:bg-red-700 p-2 rounded font-bold transition">+ CRÉER UN FAKEMON</button>
@@ -47,13 +47,9 @@
 									<label class="block text-sm text-gray-400">Nom du Fakemon</label>
 									<input type="text" id="fkName" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
 								</div>
-								<div class="grid grid-cols-3 justify-between gap-x-4">
-									<label class="block text-sm text-gray-400">Numéro</label>
-									<label class="block text-sm text-gray-400">Height</label>
-									<label class="block text-sm text-gray-400">Weight</label>
+								<div>
+									<label class="block text-sm text-gray-400">Numéro Pokédex</label>
 									<input type="number" id="fkNum" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
-									<input type="number" id="fkHeight" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
-									<input type="number" id="fkWeight" oninput="updateFakemonIdentity()" class="w-full bg-gray-700 border border-gray-600 p-2 rounded mt-1">
 								</div>
 							</div>
 
@@ -65,13 +61,13 @@
 									<div class="text-center">
 										<span class="text-xs text-gray-400">Combat (96x96)</span>
 										<a id="dl96" download="pokemon.png" class="inline-block">
-											<img id="canvas96" width="192" height="192" class="border border-gray-600 bg-gray-800 mx-auto mt-1">
+											<img id="canvas96" width="96" height="96" class="border border-gray-600 bg-gray-800 mx-auto mt-1">
 										</a>
 									</div>
 									<div class="text-center">
 										<span class="text-xs text-gray-400">Icône (40x30)</span>
 										<a id="dl40" download="pokemon.png" class="inline-block">
-											<img id="canvas40" width="80" height="60" class="border border-gray-600 bg-gray-800 mx-auto mt-1">
+											<img id="canvas40" width="40" height="30" class="border border-gray-600 bg-gray-800 mx-auto mt-1">
 										</a>
 									</div>
 								</div>
@@ -521,8 +517,6 @@
             const pk = db.pokedex[id];
             document.getElementById('fkName').value = pk.name;
             document.getElementById('fkNum').value = pk.num;
-            document.getElementById('fkHeight').value = pk.height;
-            document.getElementById('fkWeight').value = pk.weight;
 
             // Afficher l'image si elle existe en local
             displayFakemonImages(id);
@@ -554,13 +548,11 @@
 				num: nextNum, 
 				name: name,
 				types: ["Normal"],
-				heightm: 1.0, // Taille en mètres
-				weightkg: 10.0, // Poids en kg
 				baseStats: { hp: 90, atk: 90, def: 90, spa: 90, spd: 90, spe: 90 },
-				abilities: {  }
+				abilities: { 0: "" }
 			};
 			
-			db.learnsets[id] = { learnset: {rest: ["9L1"],protect: ["9L1"],substitute: ["9L1"],sleeptalk: ["9L1"]} };
+			db.learnsets[id] = { learnset: {} };
 			
 			renderPokemonSidebar();
 			selectPokemon(id);
@@ -670,8 +662,6 @@
 		function updateFakemonIdentity() {
 			db.pokedex[activeId].name = document.getElementById('fkName').value;
 			db.pokedex[activeId].num = parseInt(document.getElementById('fkNum').value) || 0;
-			db.pokedex[activeId].height = parseFloat(document.getElementById('fkHeight').value) || 0;
-			db.pokedex[activeId].weight = parseFloat(document.getElementById('fkWeight').value) || 0;
 			updatePokemonSidebarItem(activeId);   // au lieu de renderPokemonSidebar()
 		}
 
@@ -925,7 +915,7 @@
 			buildUILists(); 
 			renderPokemonSidebar();
 		};
-		
+
 		// Génère le texte d'export formatsData.ts, un fakemon par entrée,
 		// dans le format attendu par le mod (tier/doublesTier "HSD" par défaut).
 		function generateFormatsDataExport() {
@@ -941,9 +931,9 @@
 
 		// Génération des textes
 		function generateExportTexts() {
-			document.getElementById('export-pokedex').value = JSON.stringify('export const Pokedex: {[speciesid: string]: ModdedSpeciesData} = ' + db.pokedex + ';', null, 4);
-			document.getElementById('export-formatsData').value = JSON.stringify('export const Learnsets: {[speciesid: string]: ModdedLearnsetData} = ' + generateFormatsDataExport() + ';', null, 4);
-			document.getElementById('export-learnsets').value = JSON.stringify('export const FormatsData: {[k: string]: ModdedSpeciesFormatsData} = ' + db.learnsets + ';', null, 4);
+			document.getElementById('export-pokedex').value = JSON.stringify(db.pokedex, null, 4);
+			document.getElementById('export-formatsData').value = generateFormatsDataExport();
+			document.getElementById('export-learnsets').value = JSON.stringify(db.learnsets, null, 4);
 		}
 
 		// Fonction utilitaire de copie
@@ -1012,6 +1002,12 @@
 			</div>
 		`;
 	}
+		
+		
+		
+		
+		
+		
     </script>
 </body>
 </html>});
